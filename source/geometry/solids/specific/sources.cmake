@@ -74,6 +74,7 @@ geant4_add_module(G4specsolids
     G4VTwistSurface.hh
     G4VTwistSurface.icc
     G4VTwistedFaceted.hh
+    G4GeorgeSolid.hh
   SOURCES
     G4ClippablePolygon.cc
     G4Ellipsoid.cc
@@ -129,7 +130,8 @@ geant4_add_module(G4specsolids
     G4VFacet.cc
     G4Voxelizer.cc
     G4VTwistSurface.cc
-    G4VTwistedFaceted.cc)
+    G4VTwistedFaceted.cc
+    G4GeorgeSolid.cc)
 
 geant4_module_link_libraries(G4specsolids
   PUBLIC G4csg G4geometrymng G4hepnumerics G4graphics_reps G4globman G4hepgeometry ${VECGEOM_LIBRARIES}
