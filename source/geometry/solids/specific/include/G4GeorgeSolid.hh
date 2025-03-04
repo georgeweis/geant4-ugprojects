@@ -12,15 +12,24 @@ class G4GeorgeSolid : public G4VSolid
 
   public:
     G4GeorgeSolid(const G4String& name, const G4ThreeVector& centreIn,const G4double& radiusIn);
+    G4GeorgeSolid(const G4String& name);
     ~G4GeorgeSolid() override;
 
     G4ThreeVector getCentre() const;
     G4double getRadius() const;
 
+    void setCentre(const G4ThreeVector& centreIn);
+    void setRadius(const G4double& radiusIn);
+
 
     EInside Inside(const G4ThreeVector& p) const override;
     G4ThreeVector SurfaceNormal(const G4ThreeVector& p) const override;
-    G4double DistanceToIn(const G4ThreeVector& p) const override;
+
+
+  G4double DistanceToIn(const G4ThreeVector& p) const override;
+
+
+
     G4double DistanceToIn(const G4ThreeVector& p, const G4ThreeVector& v) const override;
     G4double DistanceToOut(const G4ThreeVector& p) const override;
     G4double DistanceToOut(const G4ThreeVector& p,

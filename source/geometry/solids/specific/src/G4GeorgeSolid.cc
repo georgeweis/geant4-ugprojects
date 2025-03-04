@@ -7,16 +7,34 @@
 #include <G4QuickRand.hh>
 
 G4GeorgeSolid::G4GeorgeSolid(const G4String& name, const G4ThreeVector& centreIn,const double& radiusIn):
-    G4VSolid(name), centre(centreIn), radius(radiusIn){}
+    G4VSolid(name), centre(centreIn), radius(radiusIn)
+{
+  if (radius <= 0.0) {
+    G4Exception("G4GeorgeSolid", "InvalidRadius",
+                FatalException, "Radius must be positive.");
+  }
+}
 
-G4GeorgeSolid::G4GeorgeSolid(const G4String& name, const G4ThreeVector& centreIn,const double& radiusIn):
-    G4VSolid(name), centre(centreIn), radius(radiusIn){}
+G4GeorgeSolid::G4GeorgeSolid(const G4String& name):
+    G4VSolid(name), centre(G4ThreeVector(0.0, 0.0,0.0)), radius(1.0){}
 
 G4GeorgeSolid::~G4GeorgeSolid() = default;
 
 
+
 G4ThreeVector G4GeorgeSolid::getCentre() const {return centre;}
 G4double G4GeorgeSolid::getRadius() const {return radius;}
+
+void G4GeorgeSolid::setCentre(const G4ThreeVector& centreIn){centre = centreIn;}
+void G4GeorgeSolid::setRadius(const G4double& radiusIn)
+{
+  if (radiusIn <= 0.0) {
+    G4Exception("G4GeorgeSolid", "InvalidRadius",
+                FatalException, "Radius must be positive.");
+  }
+   radius= radiusIn;
+}
+
 
 
 EInside G4GeorgeSolid::Inside(const G4ThreeVector& p) const
