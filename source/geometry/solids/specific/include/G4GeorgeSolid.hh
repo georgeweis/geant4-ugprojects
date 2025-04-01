@@ -3,6 +3,7 @@
 
 
 #include "G4VSolid.hh"
+#include "G4CSGSolid.hh"
 
 class G4GeorgeSolid : public G4VSolid
 {
@@ -12,6 +13,7 @@ class G4GeorgeSolid : public G4VSolid
 
   public:
     G4GeorgeSolid(const G4String& name, const G4ThreeVector& centreIn,const G4double& radiusIn);
+    G4GeorgeSolid(const G4String& name, const G4double& radiusIn);
     G4GeorgeSolid(const G4String& name);
     ~G4GeorgeSolid() override;
 
@@ -26,7 +28,7 @@ class G4GeorgeSolid : public G4VSolid
     G4ThreeVector SurfaceNormal(const G4ThreeVector& p) const override;
 
 
-  G4double DistanceToIn(const G4ThreeVector& p) const override;
+    G4double DistanceToIn(const G4ThreeVector& p) const override;
 
 
 
@@ -43,7 +45,18 @@ class G4GeorgeSolid : public G4VSolid
 
     G4ThreeVector GetPointOnSurface() const override;
 
+    G4VisExtent GetExtent() const override;
+    G4bool CalculateExtent( const EAxis pAxis,
+                            const G4VoxelLimits& pVoxelLimit,
+                            const G4AffineTransform& pTransform,
+                                  G4double& pMin, G4double& pMax ) const override;
+
+    void DescribeYourselfTo ( G4VGraphicsScene& scene ) const override;
+    std::ostream& StreamInfo(std::ostream& os) const override;
+    G4GeometryType GetEntityType() const override;
+
 };
+
 
 
 #endif

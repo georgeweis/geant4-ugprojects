@@ -27,6 +27,8 @@
 /// \file B1/src/DetectorConstruction.cc
 /// \brief Implementation of the B1::DetectorConstruction class
 
+// MY CLASS: added around line 162
+
 #include "DetectorConstruction.hh"
 
 #include "G4Box.hh"
@@ -45,7 +47,7 @@ namespace B1
 
 G4VPhysicalVolume* DetectorConstruction::Construct()
 {
-  G4GeorgeSolid* georgeSolid = new G4GeorgeSolid("test");
+
   // Get nist material manager
   G4NistManager* nist = G4NistManager::Instance();
 
@@ -104,29 +106,29 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   //
   // Shape 1
   //
-  G4Material* shape1_mat = nist->FindOrBuildMaterial("G4_A-150_TISSUE");
-  G4ThreeVector pos1 = G4ThreeVector(0, 2 * cm, -7 * cm);
-
-  // Conical section shape
-  G4double shape1_rmina = 0. * cm, shape1_rmaxa = 2. * cm;
-  G4double shape1_rminb = 0. * cm, shape1_rmaxb = 4. * cm;
-  G4double shape1_hz = 3. * cm;
-  G4double shape1_phimin = 0. * deg, shape1_phimax = 360. * deg;
-  auto solidShape1 = new G4Cons("Shape1", shape1_rmina, shape1_rmaxa, shape1_rminb, shape1_rmaxb,
-                                shape1_hz, shape1_phimin, shape1_phimax);
-
-  auto logicShape1 = new G4LogicalVolume(solidShape1,  // its solid
-                                         shape1_mat,  // its material
-                                         "Shape1");  // its name
-
-  new G4PVPlacement(nullptr,  // no rotation
-                    pos1,  // at position
-                    logicShape1,  // its logical volume
-                    "Shape1",  // its name
-                    logicEnv,  // its mother  volume
-                    false,  // no boolean operation
-                    0,  // copy number
-                    checkOverlaps);  // overlaps checking
+//  G4Material* shape1_mat = nist->FindOrBuildMaterial("G4_A-150_TISSUE");
+//  G4ThreeVector pos1 = G4ThreeVector(0, 2 * cm, -7 * cm);
+//
+//  // Conical section shape
+//  G4double shape1_rmina = 0. * cm, shape1_rmaxa = 2. * cm;
+//  G4double shape1_rminb = 0. * cm, shape1_rmaxb = 4. * cm;
+//  G4double shape1_hz = 3. * cm;
+//  G4double shape1_phimin = 0. * deg, shape1_phimax = 360. * deg;
+//  auto solidShape1 = new G4Cons("Shape1", shape1_rmina, shape1_rmaxa, shape1_rminb, shape1_rmaxb,
+//                                shape1_hz, shape1_phimin, shape1_phimax);
+//
+//  auto logicShape1 = new G4LogicalVolume(solidShape1,  // its solid
+//                                         shape1_mat,  // its material
+//                                         "Shape1");  // its name
+//
+//  new G4PVPlacement(nullptr,  // no rotation
+//                    pos1,  // at position
+//                    logicShape1,  // its logical volume
+//                    "Shape1",  // its name
+//                    logicEnv,  // its mother  volume
+//                    false,  // no boolean operation
+//                    0,  // copy number
+//                    checkOverlaps);  // overlaps checking
 
   //
   // Shape 2
@@ -156,9 +158,32 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
                     0,  // copy number
                     checkOverlaps);  // overlaps checking
 
-  // Set Shape2 as scoring volume
+
+  //Attempting to add my custom solid class
+
+  G4Material* george_mat = nist->FindOrBuildMaterial("G4_BONE_COMPACT_ICRU");
+
+  G4double GeorgeRadius = 4 * cm;
+  G4GeorgeSolid* georgeSolid = new G4GeorgeSolid("test", GeorgeRadius);
+
+
+
+  auto logicGeorge = new G4LogicalVolume(georgeSolid, george_mat, "GeorgeSolid");
+
+  G4ThreeVector georgePosition = G4ThreeVector(0 * cm, 0 * cm, -3 * cm);
+
+  new G4PVPlacement(nullptr,  // no rotation
+                  georgePosition,  // position
+                  logicGeorge,  // logical volume
+                  "GeorgeSolid",  // name
+                  logicEnv,  // mother volume
+                  false,  // no boolean operation
+                  0,  // copy number
+                  checkOverlaps);
+
+  // Set Shape2 as scoring volume - changed to my solid
   //
-  fScoringVolume = logicShape2;
+  fScoringVolume = logicGeorge;
 
   //
   // always return the physical World

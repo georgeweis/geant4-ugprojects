@@ -1,13 +1,40 @@
 //class defined a sphere
 
-
 #include "G4GeorgeSolid.hh"
 
+#include "G4BoundingEnvelope.hh"
+#include "G4QuickRand.hh"
+#include "G4VisExtent.hh"
+#include "G4VGraphicsScene.hh"
+#include "G4AffineTransform.hh"
+
 #include "CLHEP/Units/SystemOfUnits.h"
-#include <G4QuickRand.hh>
+
+// all includes used in sphere
+#include "G4AffineTransform.hh"
+#include "G4BoundingEnvelope.hh"
+#include "G4GeomTools.hh"
+#include "G4GeometryTolerance.hh"
+#include "G4QuickRand.hh"
+#include "G4VGraphicsScene.hh"
+#include "G4VPVParameterisation.hh"
+#include "G4VisExtent.hh"
+#include "G4VoxelLimits.hh"
+
+#include "meshdefs.hh"
+#include <G4Box.hh>
 
 G4GeorgeSolid::G4GeorgeSolid(const G4String& name, const G4ThreeVector& centreIn,const double& radiusIn):
     G4VSolid(name), centre(centreIn), radius(radiusIn)
+{
+  if (radius <= 0.0) {
+    G4Exception("G4GeorgeSolid", "InvalidRadius",
+                FatalException, "Radius must be positive.");
+  }
+}
+
+G4GeorgeSolid::G4GeorgeSolid(const G4String& name, const double& radiusIn):
+    G4VSolid(name), centre(G4ThreeVector(0.0, 0.0,0.0)), radius(radiusIn)
 {
   if (radius <= 0.0) {
     G4Exception("G4GeorgeSolid", "InvalidRadius",
@@ -39,10 +66,12 @@ void G4GeorgeSolid::setRadius(const G4double& radiusIn)
 
 EInside G4GeorgeSolid::Inside(const G4ThreeVector& p) const
 {
-  if (p.mag()<radius) {
+
+
+  if ((p-centre).mag()<radius) {
     return kInside;
   }
-  else if (p.mag()==radius) {
+  else if ((p-centre).mag()==radius) {
     return kSurface;
   }
   else {
@@ -57,9 +86,16 @@ G4ThreeVector G4GeorgeSolid::SurfaceNormal(const G4ThreeVector& p) const
 
 G4double G4GeorgeSolid::DistanceToIn(const G4ThreeVector& p) const
 {
+  // G4Box *g = nullptr;
+  // std::cout << g->GetName()<< std::endl;
+
   G4ThreeVector direction = (p-centre).unit(); // direction to point from centre
   G4ThreeVector p_on_surface = direction*radius;
   G4double distance = (p-p_on_surface).mag();
+  if (distance <= 0)
+  {
+    return 0;
+  }
   return distance;
 }
 
@@ -76,15 +112,17 @@ G4double G4GeorgeSolid::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVecto
   G4double A = d.mag2() - radius*radius;
   G4double discriminant = B*B - A;
 
-  if (discriminant < 0) {return kInfinity;} //no intersection
+  if (discriminant < 0) {return kInfinity;} //no intersection since no real solutions
 
-  G4double l1 = -B - std::sqrt(discriminant);
-  G4double l2 = -B + std::sqrt(discriminant);
-  if (l1>0) {return l1;}
-  if (l2>0) {return l2;}
+  G4double l1 = -B - std::sqrt(discriminant); //solution closer to start point of line -->--*(  )
+  G4double l2 = -B + std::sqrt(discriminant); //solution closer to end point of line -->---(-*)
+
+  if (l1>0) {return l1;} // distance from surface
+  else if (l2>0) {return 0;} // point already inside sphere (->-) ie. one neg one pos
 
 
-  return kInfinity; // particle moving away from sphere - no intersection
+
+  return kInfinity; // particle moving away from sphere - no intersection <---( )
 }
 
 G4double G4GeorgeSolid::DistanceToOut(const G4ThreeVector& p) const
@@ -108,10 +146,14 @@ G4double G4GeorgeSolid::DistanceToOut( const G4ThreeVector& p,const G4ThreeVecto
   G4double A = d.mag2() - radius*radius;
   G4double discriminant = B*B - A;
 
-  G4double l1 = -B - std::sqrt(discriminant);
-  G4double l2 = -B + std::sqrt(discriminant);
+  //this func should only be called if point is already inside
+  //it will have a positive and negative solution, need to take the positive solution as this is
+  //in the direction of the velocity vector. This should always be the solution with + (ie. l1)
+
+  G4double l1 = -B + std::sqrt(discriminant);
+  // G4double l2 = -B - std::sqrt(discriminant);
   if (l1>0) {return l1;}
-  if (l2>0) {return l2;}
+  //else if (l2>0) {return l2;}
 
   return kInfinity; // shouldn't occur in a closed surface
 }
@@ -139,6 +181,55 @@ G4ThreeVector G4GeorgeSolid::GetPointOnSurface() const
   //creating a point on the surface
   G4ThreeVector point_on_surface = randomDirection*radius + centre;
   return point_on_surface;
+}
+
+
+G4VisExtent G4GeorgeSolid::GetExtent() const
+{
+  return { centre.x() - radius, centre.x() + radius,
+         centre.y() - radius, centre.y() + radius,
+         centre.z() - radius, centre.z() + radius };
+}
+
+
+G4bool G4GeorgeSolid::CalculateExtent( const EAxis pAxis,
+                                  const G4VoxelLimits& pVoxelLimit,
+                                  const G4AffineTransform& pTransform,
+                                        G4double& pMin, G4double& pMax ) const
+{
+  G4ThreeVector bmin, bmax;
+
+  // Get bounding box
+  BoundingLimits(bmin,bmax);
+
+  // Find extent
+  G4BoundingEnvelope bbox(bmin,bmax);
+  return bbox.CalculateExtent(pAxis,pVoxelLimit,pTransform,pMin,pMax);
+}
+
+void G4GeorgeSolid::DescribeYourselfTo ( G4VGraphicsScene& scene ) const
+{
+  scene.AddSolid (*this);
+}
+
+std::ostream& G4GeorgeSolid::StreamInfo( std::ostream& os ) const
+{
+  G4long oldprc = os.precision(16);
+  os << "-----------------------------------------------------------\n"
+     << "    *** Dump for solid - " << GetName() << " ***\n"
+     << "    ===================================================\n"
+     << " Solid type: G4GeorgeSolid\n"
+     << " Parameters: \n"
+     << "    radius: " << radius << " cm \n"
+     << "-----------------------------------------------------------\n";
+  os.precision(oldprc);
+
+  return os;
+}
+
+G4GeometryType G4GeorgeSolid::GetEntityType() const
+{
+  return {"G4GeorgeSolid"};
 }
 
 
