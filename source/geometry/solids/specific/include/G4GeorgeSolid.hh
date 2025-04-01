@@ -55,6 +55,8 @@ class G4GeorgeSolid : public G4VSolid
     std::ostream& StreamInfo(std::ostream& os) const override;
     G4GeometryType GetEntityType() const override;
 
+    void print_info() const;
+
 };
 
 

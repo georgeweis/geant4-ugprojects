@@ -11,14 +11,9 @@
 #include "CLHEP/Units/SystemOfUnits.h"
 
 // all includes used in sphere
-#include "G4AffineTransform.hh"
-#include "G4BoundingEnvelope.hh"
 #include "G4GeomTools.hh"
 #include "G4GeometryTolerance.hh"
-#include "G4QuickRand.hh"
-#include "G4VGraphicsScene.hh"
 #include "G4VPVParameterisation.hh"
-#include "G4VisExtent.hh"
 #include "G4VoxelLimits.hh"
 
 #include "meshdefs.hh"
@@ -233,4 +228,9 @@ G4GeometryType G4GeorgeSolid::GetEntityType() const
 }
 
 
-
+void G4GeorgeSolid::print_info() const
+{
+  std::cout << "G4GeorgeSolid: " << GetName() << "\n";
+  std::cout << "Radius: " << radius << "\n";
+  std::cout << "Centre: " << centre << "\n";
+}
