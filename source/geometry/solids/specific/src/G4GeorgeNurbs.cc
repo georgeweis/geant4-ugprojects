@@ -20,9 +20,14 @@
 #include <G4Box.hh>
 
 
-#ifdef GEANT4_USE_NLOPT
-#include <nlopt.hpp> // only includes if GEANT4_USE_NLOPT = ON
-#endif
+
+#include <nlopt.hpp>
+
+
+
+double G4GeorgeNurbs::LARGE_NUMBER = 1e6;
+G4ThreeVector G4GeorgeNurbs::LARGE_THREE_VECTOR = G4ThreeVector( 1e6,  1e6,  1e6);
+
 
 
 
@@ -154,10 +159,8 @@ G4ThreeVector G4GeorgeNurbs::SurfacePoint(G4double u, G4double v) const
     }
   }
 
-  const double LARGE_NUMBER = 1e6;
-
   if (denominator == 0.0) {
-    return G4ThreeVector(LARGE_NUMBER, LARGE_NUMBER, LARGE_NUMBER);
+    return LARGE_THREE_VECTOR;
   } else {
     return numerator / denominator;
   }

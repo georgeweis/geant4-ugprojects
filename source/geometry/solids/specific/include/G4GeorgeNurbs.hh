@@ -22,6 +22,9 @@ class G4GeorgeNurbs : public G4VSolid
   G4int degreeU;
   G4int degreeV;
 
+  static double LARGE_NUMBER;
+  static G4ThreeVector LARGE_THREE_VECTOR;
+
   public:
   G4GeorgeNurbs(const G4String& name,
                 const std::vector<std::vector<G4ThreeVector>>& controlPts_in,
