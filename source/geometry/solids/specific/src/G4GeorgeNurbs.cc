@@ -20,6 +20,12 @@
 #include <G4Box.hh>
 
 
+#ifdef GEANT4_USE_NLOPT
+#include <nlopt.hpp> // only includes if GEANT4_USE_NLOPT = ON
+#endif
+
+
+
 G4GeorgeNurbs::G4GeorgeNurbs(const G4String& name,
                const std::vector<std::vector<G4ThreeVector>>& controlPts_in,
                const std::vector<std::vector<G4double>>& weights_in,
@@ -35,18 +41,11 @@ G4GeorgeNurbs::G4GeorgeNurbs(const G4String& name,
   degreeU(degreeU_in),
   degreeV(degreeV_in)
 {
-  int expected_knot_length_U = controlPts.size() + degreeU + 1;
-  int expected_knot_length_V = controlPts[0].size() + degreeV + 1;
-
-  if (knotVectorU.size() != expected_knot_length_U
-      || knotVectorV.size() != expected_knot_length_V)
-  {
-    G4Exception("G4GeorgeNurbs", "InvalidKnotVectorSize",
-                FatalException, "Invalid knot vector size.");
-  }
+  ValidateKnotVectors();
 }
 
 G4GeorgeNurbs::~G4GeorgeNurbs() = default;
+
 
 void G4GeorgeNurbs::PrintVariables() const
 {
@@ -87,6 +86,19 @@ void G4GeorgeNurbs::PrintVariables() const
     std::cout << v << " ";
   }
   std::cout << "\n";
+
+
+
+  //test to check that nlopt has been included
+  try {
+    // Create a dummy 2D optimizer
+    nlopt::opt test_opt(nlopt::LN_NELDERMEAD, 2);
+    std::cout << "NLopt is working! Algorithm: "
+              << test_opt.get_algorithm() << std::endl;
+  }
+  catch (const std::exception& e) {
+    std::cerr << "NLopt error: " << e.what() << std::endl;
+  }
 }
 
 
@@ -267,4 +279,31 @@ std::ostream& G4GeorgeNurbs::StreamInfo( std::ostream& os ) const
 G4GeometryType G4GeorgeNurbs::GetEntityType() const
 {
   return {"G4GeorgeNurbs"};
+}
+
+
+
+
+void G4GeorgeNurbs::ValidateKnotVectors() const
+{
+  int expected_knot_length_U = controlPts.size() + degreeU + 1;
+  int expected_knot_length_V = controlPts[0].size() + degreeV + 1;
+
+  if (knotVectorU.size() != expected_knot_length_U || knotVectorV.size() != expected_knot_length_V)
+  {
+    std::ostringstream oss;
+    if (knotVectorU.size() != expected_knot_length_U)
+    {
+      oss << "Invalid U knot vector length: expected " << expected_knot_length_U
+          << ", got " << knotVectorU.size() << ".\n";
+    }
+    if (knotVectorV.size() != expected_knot_length_V)
+    {
+      oss << "Invalid V knot vector length: expected " << expected_knot_length_V
+          << ", got " << knotVectorV.size() << ".\n";
+    }
+
+    G4Exception("G4GeorgeNurbs", "InvalidKnotVectorSize",
+                FatalException, oss.str().c_str());
+  }
 }

@@ -136,6 +136,15 @@ geant4_add_module(G4specsolids
     G4GeorgeNurbs.cc)
 
 geant4_module_link_libraries(G4specsolids
-  PUBLIC G4csg G4geometrymng G4hepnumerics G4graphics_reps G4globman G4hepgeometry ${VECGEOM_LIBRARIES}
-  PRIVATE G4heprandom)
+  PUBLIC
+    G4csg
+    G4geometrymng
+    G4hepnumerics
+    G4graphics_reps
+    G4globman
+    G4hepgeometry
+    ${VECGEOM_LIBRARIES}
+    $<$<BOOL:${GEANT4_USE_NLOPT}>:NLopt::nlopt>  # added by George for nlopt
+  PRIVATE
+    G4heprandom)
 

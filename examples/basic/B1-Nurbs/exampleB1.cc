@@ -42,6 +42,7 @@
 
 #include <iostream>
 #include <vector>
+//#include <nlopt.hpp>
 
 
 
@@ -83,24 +84,38 @@ int main(int argc, char** argv)
 
   G4GeorgeNurbs* georgeNurbs = new G4GeorgeNurbs("test", controlPts, weights, knotsU, knotsV, degreeU, degreeV);
 
-  /*
+
   std::cout<<"\ngeorgeNurbs->PrintVariables() output: "<<std::endl;
   georgeNurbs->PrintVariables();
-   */
+
 
 
   G4ThreeVector surfacePt = georgeNurbs->SurfacePoint(0.3,0.3);
   std::cout<<"\ngeorgeNurbs->SurfacePoint(0.3,0.3) output: "<<surfacePt<<std::endl;
 
 
+  std::cout<<"-------------------------------------------------------------------------"<<std::endl;
+
+  // test to check that nlopt has been included
+//	try {
+//        // Create a dummy 2D optimizer
+//        nlopt::opt test_opt(nlopt::LN_NELDERMEAD, 2);
+//        std::cout << "NLopt is working! Algorithm: "
+//                  << test_opt.get_algorithm() << std::endl;
+//    }
+//    catch (const std::exception& e) {
+//        std::cerr << "NLopt error: " << e.what() << std::endl;
+//    }
 
 
 
 
   delete georgeNurbs;
 
+  return 0;
 
 
+}
 
 
 
@@ -181,6 +196,6 @@ int main(int argc, char** argv)
 //
 //  delete visManager;
 //  delete runManager;
-}
+//}
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo.....

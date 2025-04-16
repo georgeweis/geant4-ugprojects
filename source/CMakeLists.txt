@@ -1,5 +1,21 @@
 # - Define toolkit source code modules and composed libraries
 
+
+# Block added by George for nlopt -------------------------------------------
+option(GEANT4_USE_NLOPT "Enable use of NLopt in G4specsolids" ON)
+
+if(GEANT4_USE_NLOPT)
+  set(NLopt_DIR "/opt/homebrew/Cellar/nlopt/2.10.0/lib/cmake/nlopt")
+  find_package(NLopt REQUIRED)
+endif()
+
+
+if (TARGET NLopt::nlopt)
+  message(STATUS "✅ NLopt::nlopt target found and available!")
+else()
+  message(FATAL_ERROR "❌ NLopt::nlopt target NOT found after find_package()")
+endif()
+# ----------------------------------------------------------------------------
 add_subdirectory(analysis)
 add_subdirectory(digits_hits)
 add_subdirectory(error_propagation)

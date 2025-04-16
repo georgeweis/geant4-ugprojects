@@ -72,6 +72,10 @@ class G4GeorgeNurbs : public G4VSolid
 
 
 
+  void ValidateKnotVectors() const;
+
+
+
 
 
 
