@@ -11,6 +11,7 @@ project(B1)
 set(NLopt_DIR "/opt/homebrew/Cellar/nlopt/2.10.0/lib/cmake/nlopt")
 find_package(NLopt REQUIRED)
 
+set(CMAKE_PREFIX_PATH "Semester8project/Geant4/install")
 find_package(Geant4 REQUIRED ui_all vis_all)
 
 #----------------------------------------------------------------------------
