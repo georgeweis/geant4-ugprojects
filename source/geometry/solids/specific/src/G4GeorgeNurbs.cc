@@ -21,6 +21,11 @@
 
 
 
+#include <algorithm>  // for std::unique_copy
+#include <iterator>   // for std::back_inserter
+#include "G4TwoVector.hh"
+
+
 #include <nlopt.hpp>
 
 
@@ -50,6 +55,9 @@ G4GeorgeNurbs::G4GeorgeNurbs(const G4String& name,
 }
 
 G4GeorgeNurbs::~G4GeorgeNurbs() = default;
+
+
+
 
 
 void G4GeorgeNurbs::PrintVariables() const
@@ -95,20 +103,25 @@ void G4GeorgeNurbs::PrintVariables() const
 
 
   //test to check that nlopt has been included
-  try {
-    // Create a dummy 2D optimizer
-    nlopt::opt test_opt(nlopt::LN_NELDERMEAD, 2);
-    std::cout << "NLopt is working! Algorithm: "
-              << test_opt.get_algorithm() << std::endl;
-  }
-  catch (const std::exception& e) {
-    std::cerr << "NLopt error: " << e.what() << std::endl;
-  }
+  // try {
+  //   // Create a dummy 2D optimizer
+  //   nlopt::opt test_opt(nlopt::LN_NELDERMEAD, 2);
+  //   std::cout << "NLopt is working! Algorithm: "
+  //             << test_opt.get_algorithm() << std::endl;
+  // }
+  // catch (const std::exception& e) {
+  //   std::cerr << "NLopt error: " << e.what() << std::endl;
+  // }
 }
 
 
 
-G4double G4GeorgeNurbs::BasisFunction(G4int i, G4int k, G4double t, const std::vector<G4double>& knotVector) const
+
+// Functions required to define a NURBS surface =====================================================
+
+
+G4double G4GeorgeNurbs::BasisFunction(G4int i, G4int k, G4double t,
+                                      const std::vector<G4double>& knotVector) const
 {
   // Avoid unnecessary computation if t is out of range
   if (!(knotVector[i] <= t && t <= knotVector[i + k + 1])) {
@@ -167,6 +180,171 @@ G4ThreeVector G4GeorgeNurbs::SurfacePoint(G4double u, G4double v) const
 }
 
 
+// Functions for optimisation techniques ================================================================
+
+G4TwoVector G4GeorgeNurbs::ClosestKnot(const G4ThreeVector& point) const
+{
+  double smallest_R = LARGE_NUMBER;
+  G4TwoVector u_v_smallest_R(0.0, 0.0);
+
+  // Unique knot vectors
+  std::vector<G4double> unique_u_knots;
+  std::vector<G4double> unique_v_knots;
+
+  std::unique_copy(knotVectorU.begin(), knotVectorU.end(), std::back_inserter(unique_u_knots));
+  std::unique_copy(knotVectorV.begin(), knotVectorV.end(), std::back_inserter(unique_v_knots));
+
+  for (size_t i = 0; i < unique_u_knots.size(); ++i)
+  {
+    for (size_t j = 0; j < unique_v_knots.size(); ++j)
+    {
+      G4ThreeVector P_s_knot = SurfacePoint(unique_u_knots[i], unique_v_knots[j]);
+      G4ThreeVector residual_vec = P_s_knot - point;
+      double separation = residual_vec.mag();
+
+      // Debugging output
+      // G4cout << "\nuknot[" << i << "] = " << unique_u_knots[i] << G4endl;
+      // G4cout << "vknot[" << j << "] = " << unique_v_knots[j] << G4endl;
+      // G4cout << "separation = " << separation << G4endl;
+
+      if (separation < smallest_R)
+      {
+        smallest_R = separation;
+        u_v_smallest_R.set(unique_u_knots[i], unique_v_knots[j]);
+        // G4cout << "====entered if statement======" << G4endl;
+      }
+    }
+  }
+  return u_v_smallest_R;
+}
+
+
+
+G4ThreeVector G4GeorgeNurbs::ClosestPoint(const G4ThreeVector& point) const
+{
+  // Finds the closest point on the surface to a given point in space
+
+  // 1) set initial guess as closest knot
+  G4TwoVector uv_guess = ClosestKnot(point);
+
+  // 2) Set up the NLopt optimizer (Nelder-Mead, 2D problem)
+  nlopt::opt optimizer(nlopt::LN_NELDERMEAD, 2);
+  optimizer.set_xtol_rel(1e-6);  // Tolerance for convergence
+
+  // 3) Prepare context with reference to this surface and the target point
+  OptimizationContext context = {this, point};
+
+  // 4) Set objective function and pass context
+  optimizer.set_min_objective(G4GeorgeNurbs::ResidualToSurfacePoint, &context);
+
+
+  // 5) ensure u and v dont go out of bounds
+  optimizer.set_lower_bounds({knotVectorU.front(), knotVectorV.front()});
+  optimizer.set_upper_bounds({knotVectorU.back(), knotVectorV.back()});
+
+  // 6) optimising
+  std::vector<double> uv = {uv_guess.x(), uv_guess.y()};
+  double min_value;
+
+  try {
+    nlopt::result result = optimizer.optimize(uv, min_value);
+    return SurfacePoint(uv[0], uv[1]); // Return closest surface point
+  }
+  catch (const std::exception& e) {
+    // In case of failure, report and return a fallback value
+    G4cerr << "NLopt error in ClosestPoint: " << e.what() << G4endl;
+    return LARGE_THREE_VECTOR;
+  }
+}
+
+
+G4ThreeVector G4GeorgeNurbs::LineIntersection(const G4ThreeVector& P0,
+                                              const G4ThreeVector& direction,
+                                              double lambda_bound) const
+{
+
+  std::vector<double> uvl = {0.5, 0.5, 0.0}; // initial guess
+
+  nlopt::opt opt(nlopt::LN_NELDERMEAD, 3);
+  opt.set_xtol_rel(1e-6);
+
+  // Set bounds for (u, v, lambda)
+  opt.set_lower_bounds({knotVectorU.front(), knotVectorV.front(), -std::abs(lambda_bound)});
+  opt.set_upper_bounds({knotVectorU.back(),  knotVectorV.back(),  std::abs(lambda_bound)});
+
+  LineIntersectionContext context = {
+    this,
+    P0,
+    direction.unit(),  // ensure it's a unit vector
+    lambda_bound
+  };
+
+  opt.set_min_objective(G4GeorgeNurbs::ResidualLineDistance, &context);
+
+  double d_opt;
+  try {
+    nlopt::result result = opt.optimize(uvl, d_opt);
+    double u_opt = uvl[0];
+    double v_opt = uvl[1];
+    double lambda_opt = uvl[2];
+
+    if (std::abs(d_opt) > 1e-6 ||
+        std::signbit(lambda_opt) != std::signbit(lambda_bound) ||
+        std::abs(lambda_opt) > std::abs(lambda_bound)) {
+      return LARGE_THREE_VECTOR;
+        }
+
+    return SurfacePoint(u_opt, v_opt);
+  }
+  catch (const std::exception& e) {
+    G4cerr << "NLopt error in LineIntersection: " << e.what() << G4endl;
+    return LARGE_THREE_VECTOR;
+  }
+
+}
+
+
+
+
+// Static functions and structs used in optimisation =============================================================
+
+// #ifdef GEANT4_USE_NLOPT //
+double G4GeorgeNurbs::ResidualToSurfacePoint(const std::vector<double>& uv, std::vector<double>& grad, void* data)
+{
+  // definition of static function used by NLopt to compute the distance (residual)
+  // between a surface point and a fixed target point.
+
+  // Unpacking context (contains the target point and pointer to the NURBS surface)
+  const auto* context = static_cast<G4GeorgeNurbs::OptimizationContext*>(data);
+  const G4GeorgeNurbs* nurbs = context->nurbs;
+  const G4ThreeVector& target_point = context->target_point;
+
+  // find the surface point at uv (passed as argument)
+  G4ThreeVector surf_pt = nurbs->SurfacePoint(uv[0], uv[1]);
+
+  // calculating the distance between the surface point and target point
+  G4ThreeVector residual = surf_pt - target_point;
+  return residual.mag();
+}
+
+
+
+double G4GeorgeNurbs::ResidualLineDistance(const std::vector<double>& uvl,
+                                           std::vector<double>& grad,
+                                           void* data)
+{
+  // function to optimise in LineIntersection.
+  const auto* context = static_cast<LineIntersectionContext*>(data);
+
+  double u = uvl[0]; // u and v define a point on the surface
+  double v = uvl[1];
+  double lambda = uvl[2]; // l defines a point on the line
+
+  G4ThreeVector P_nurbs = context->nurbs->SurfacePoint(u, v);
+  G4ThreeVector P_line = context->P0 + lambda * context->direction;
+
+  return (P_line - P_nurbs).mag(); // return distance between those two points
+}
 
 
 
@@ -174,10 +352,10 @@ G4ThreeVector G4GeorgeNurbs::SurfacePoint(G4double u, G4double v) const
 
 
 
+// #endif // GEANT4_USE_NLOPT
 
 
-
-
+// Overridden Base class functions ====================================================================
 
 EInside G4GeorgeNurbs::Inside(const G4ThreeVector& p) const
 {
@@ -289,8 +467,8 @@ G4GeometryType G4GeorgeNurbs::GetEntityType() const
 
 void G4GeorgeNurbs::ValidateKnotVectors() const
 {
-  int expected_knot_length_U = controlPts.size() + degreeU + 1;
-  int expected_knot_length_V = controlPts[0].size() + degreeV + 1;
+  std::size_t expected_knot_length_U = controlPts.size() + degreeU + 1;
+  std::size_t expected_knot_length_V = controlPts[0].size() + degreeV + 1;
 
   if (knotVectorU.size() != expected_knot_length_U || knotVectorV.size() != expected_knot_length_V)
   {

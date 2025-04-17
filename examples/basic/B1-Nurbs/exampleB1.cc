@@ -42,6 +42,7 @@
 
 #include <iostream>
 #include <vector>
+#include <string>
 //#include <nlopt.hpp>
 
 
@@ -93,20 +94,99 @@ int main(int argc, char** argv)
   G4ThreeVector surfacePt = georgeNurbs->SurfacePoint(0.3,0.3);
   std::cout<<"\ngeorgeNurbs->SurfacePoint(0.3,0.3) output: "<<surfacePt<<std::endl;
 
+  // ✅✅ same output as Python class --> Nurbs_Surface10_arc.py, TEST_NB = 0
+
 
   std::cout<<"-------------------------------------------------------------------------"<<std::endl;
 
-  // test to check that nlopt has been included
-//	try {
-//        // Create a dummy 2D optimizer
-//        nlopt::opt test_opt(nlopt::LN_NELDERMEAD, 2);
-//        std::cout << "NLopt is working! Algorithm: "
-//                  << test_opt.get_algorithm() << std::endl;
-//    }
-//    catch (const std::exception& e) {
-//        std::cerr << "NLopt error: " << e.what() << std::endl;
-//    }
+  std::string start_section = "----------------------------";
+  std::string end_section = "-------------------------------------------------------------------------\n\n";
 
+
+
+
+
+  // closes knot test
+  std::cout<<start_section<<"closest knot test"<<start_section <<"\n"<<std::endl;
+
+  G4ThreeVector const_point = G4ThreeVector(0,0,0.2);
+
+  G4TwoVector uv_closest_knot = georgeNurbs->ClosestKnot(const_point);
+  G4ThreeVector p_closest_knot = georgeNurbs->SurfacePoint(uv_closest_knot[0],uv_closest_knot[1]);
+
+
+  std::cout<<"const_point: "<<const_point<<std::endl;
+  std::cout<<"uv_closest_knot: "<<uv_closest_knot<<std::endl;
+  std::cout<<"p_closest_knot: "<<p_closest_knot<<std::endl;
+
+  std::cout<<end_section;
+
+  // ✅✅ same output as Python class --> Nurbs_Surface10_arc.py, TEST_NB = 1
+
+
+
+
+  // closes surface point test
+  std::cout<<start_section<<"closest surface point test"<<start_section <<"\n"<<std::endl;
+
+  G4ThreeVector const_point1 = G4ThreeVector(0.5,0.2,0.3);
+  G4ThreeVector P_surface_opt = georgeNurbs->ClosestPoint(const_point1);
+  std::cout<<"const_point: "<<const_point1<<std::endl;
+  std::cout<<"P_surface_opt: "<<P_surface_opt<<std::endl;
+
+  std::cout<<end_section;
+  // ✅✅ same output as Python class --> Nurbs_Surface10_arc.py, TEST_NB = 2
+
+
+
+
+
+
+
+  // line intersection test
+  std::cout<<start_section<<"line intersection test"<<start_section <<"\n"<<std::endl;
+
+  int SUB_TEST_NB = 2;
+  G4ThreeVector p0;
+  G4ThreeVector nline;
+  double lambda_max;
+
+  if (SUB_TEST_NB == 0)
+  {
+  	// Line which intersects the surface
+  	p0 = G4ThreeVector(0.5, 1.0, 1.0);
+  	nline = G4ThreeVector(0.0, -1.0, -1.0).unit();
+  	lambda_max = 3.0;
+  }// ✅✅ same output as Python class
+
+  if (SUB_TEST_NB == 1)
+  {
+    // Line is too short to reach the surface
+  	p0 = G4ThreeVector(0.5, 0.6, 0.6);
+  	nline = G4ThreeVector(0.0, -1.0, -1.0).unit();
+  	lambda_max = 0.1;
+  }// ✅✅ same output as Python class
+
+  if (SUB_TEST_NB == 2)
+  {
+  	// Infinite line misses the surface completely
+  	p0 = G4ThreeVector(0.5, 1.0, 0.6);
+  	nline = G4ThreeVector(10.0, -1.0, 1.0).unit();
+  	lambda_max = 3.0;
+  }// ✅✅ same output as Python class
+
+
+  G4ThreeVector line_intersec = georgeNurbs->LineIntersection(p0, nline, lambda_max);
+
+
+  std::cout<<"p0 = "<<p0<<std::endl;
+  std::cout<<"nline = "<<nline<<std::endl;
+  std::cout<<"lambda_max = "<<lambda_max<<std::endl;
+
+  std::cout<<"line_intersec = "<<line_intersec<<std::endl;
+  std::cout<<end_section;
+
+  // ✅✅ same output as Python class --> Nurbs_Surface10_arc.py, TEST_NB = 5
 
 
 
