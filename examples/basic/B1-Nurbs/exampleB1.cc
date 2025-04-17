@@ -111,12 +111,21 @@ int main(int argc, char** argv)
 
   G4ThreeVector const_point = G4ThreeVector(0,0,0.2);
 
-  G4TwoVector uv_closest_knot = georgeNurbs->ClosestKnot(const_point);
+sir  std::cout<<"G4ThreeVector const_point = G4ThreeVector(0,0,0.2);"<<std::endl;
+
+
+  auto [uv_closest_knot, R_closest_knot] = georgeNurbs->ClosestKnot(const_point);
+
+  std::cout<<"std::vector<double> uv_closest_knot = georgeNurbs->ClosestKnot(const_point);"<<std::endl;
+
   G4ThreeVector p_closest_knot = georgeNurbs->SurfacePoint(uv_closest_knot[0],uv_closest_knot[1]);
+
+  std::cout<<"G4ThreeVector p_closest_knot = georgeNurbs->SurfacePoint(uv_closest_knot[0],uv_closest_knot[1]);"<<std::endl;
+
 
 
   std::cout<<"const_point: "<<const_point<<std::endl;
-  std::cout<<"uv_closest_knot: "<<uv_closest_knot<<std::endl;
+  std::cout<<"uv_closest_knot: "<<uv_closest_knot.size()<<std::endl;//"("<<uv_closest_knot[0]<<","<<uv_closest_knot[1]<<")"<<std::endl;
   std::cout<<"p_closest_knot: "<<p_closest_knot<<std::endl;
 
   std::cout<<end_section;
@@ -136,10 +145,6 @@ int main(int argc, char** argv)
 
   std::cout<<end_section;
   // ✅✅ same output as Python class --> Nurbs_Surface10_arc.py, TEST_NB = 2
-
-
-
-
 
 
 
@@ -187,6 +192,46 @@ int main(int argc, char** argv)
   std::cout<<end_section;
 
   // ✅✅ same output as Python class --> Nurbs_Surface10_arc.py, TEST_NB = 5
+
+
+  //surface derivative + normal test
+  std::cout << start_section << "surface derivative + normal test" << start_section << "\n" << std::endl;
+
+  G4double u = 0.3;
+  G4double v = 0.7;
+
+
+  G4ThreeVector P_surface = georgeNurbs->SurfacePoint(u, v); // some point on surface P(u,v)
+
+  std::vector<G4ThreeVector> tangents = georgeNurbs->SurfaceDerivatives(u, v); // tangents at that point
+  G4ThreeVector tangent_u = tangents[0];
+  G4ThreeVector tangent_v = tangents[1];
+
+  // cross product of the tanglent vectors is the normal
+  G4ThreeVector normal = tangent_u.cross(tangent_v);
+
+  // using the SurfaceNormal(u,v) function
+  G4ThreeVector normal_uv_func = georgeNurbs->SurfaceNormal(u, v);//✅✅ same output as Python class TEST_NB = 6
+
+  // using overridden SurfaceNormal(p) function
+  G4ThreeVector normal_p_func = georgeNurbs->SurfaceNormal(P_surface); //✅✅ same output as SurfaceNormal(u, v)
+
+
+
+  std::cout << "u: " << u << ", v: " << v << std::endl;
+  std::cout << "P_surface: " << P_surface << std::endl;
+  std::cout << "tangent_u: " << tangent_u << std::endl;
+  std::cout << "tangent_v: " << tangent_v << std::endl;
+  std::cout << "normal: " << normal << std::endl;
+  std::cout << "normal using SurfaceNormal(u, v): " << normal_uv_func << std::endl;
+  std::cout << "normal using SurfaceNormal(p): " << normal_p_func << std::endl;
+
+  std::cout << end_section;
+  // ✅✅ same output as Python class --> Nurbs_Surface10_arc.py, TEST_NB = 6
+
+
+  // Inside
+
 
 
 

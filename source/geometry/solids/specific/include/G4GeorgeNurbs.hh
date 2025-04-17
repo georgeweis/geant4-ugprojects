@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <vector>
+#include <tuple>
 
 #include "G4VSolid.hh"
 #include "G4ThreeVector.hh"
@@ -25,6 +26,7 @@ class G4GeorgeNurbs : public G4VSolid
 
   static double LARGE_NUMBER;
   static G4ThreeVector LARGE_THREE_VECTOR;
+  static double CONVERGENCE_TOLERANCE;
 
 
   public:
@@ -44,17 +46,41 @@ class G4GeorgeNurbs : public G4VSolid
   // Functions required to define a NURBS surface ====================================================
 
   G4double BasisFunction(G4int i, G4int k, G4double t, const std::vector<G4double>& knotVector) const;
+  // recursive basis function
+
   G4ThreeVector SurfacePoint(G4double u, G4double v) const;
+  // calculates the surface point by applying the formula for a surface point. (uses BasisFunction)
+
+  G4double BasisFunctionDerivative(G4int i, G4int k, G4double t,
+                                   const std::vector<G4double>& knotVector) const;
+  // calculates the derivative of the basis function. (non-recursive but uses BasisFunction)
+
+  std::vector<G4ThreeVector> SurfaceDerivatives(G4double u, G4double v) const;
+  // calculates the surface derivative (tangent vector) using the appropriate formula (uses BasisFunctionDerivative)
+  // Returns the derivative in the u and v direction (dS_du and dS_dv) as a vector of G4ThreeVectors
+
 
 
 
   // Functions for optimisation techniques ============================================================
-  G4TwoVector ClosestKnot(const G4ThreeVector& point) const;
+  std::tuple<std::vector<double>, double> ClosestKnot(const G4ThreeVector& point) const;
   // iterates through the unique knots to find the closest knot to a given point.
-  // Used as initial guess for optimisation techniques
+  // Generally used as initial guess for optimisation techniques.
+  // Returns a tuple of < [u,v] , R > where
+  // - [u,v] are the surface parameters of the closest knot
+  // - R is the distance to the closest knot
+
+
+  std::tuple<std::vector<double>, double> ClosestPointParams(const G4ThreeVector& point) const;
+  // Finds the u and v parameters of the closest point on the NURBS surface to a given point by
+  // minimising the magnitude (P_surface(u,v) - point(x,y,z)).
+  // Returns a tuple of < [u,v], R> where:
+  // - [u,v] is a vector<double> of the optimised u,v surface parameters
+  // - R is a double representing separation between P_surface(u,v) and point(x,y,z) at optimal value
 
   G4ThreeVector ClosestPoint(const G4ThreeVector& point) const;
-  // Finds the closest point on the NURBS surface to a given point
+  // Calls ClosestPointParams for u, v and returns the surface point as a position vector.
+  // Function adds no logic to but improves readability of code.
 
   G4ThreeVector LineIntersection(const G4ThreeVector& P0,
                                  const G4ThreeVector& direction,
@@ -122,11 +148,14 @@ class G4GeorgeNurbs : public G4VSolid
 
 
 
-
+  // Overridden Base class functions ======================================================================
   public:
-  // Overidden Base class functions ======================================================================
+
   EInside Inside(const G4ThreeVector& p) const override;
   G4ThreeVector SurfaceNormal(const G4ThreeVector& p) const override;
+
+  G4ThreeVector SurfaceNormal(const double u, const double v) const;
+  // finds the surface normal at a surface point defined by u and v
 
 
   G4double DistanceToIn(const G4ThreeVector& p) const override;
