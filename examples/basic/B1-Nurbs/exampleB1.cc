@@ -111,7 +111,7 @@ int main(int argc, char** argv)
 
   G4ThreeVector const_point = G4ThreeVector(0,0,0.2);
 
-sir  std::cout<<"G4ThreeVector const_point = G4ThreeVector(0,0,0.2);"<<std::endl;
+   std::cout<<"G4ThreeVector const_point = G4ThreeVector(0,0,0.2);"<<std::endl;
 
 
   auto [uv_closest_knot, R_closest_knot] = georgeNurbs->ClosestKnot(const_point);
