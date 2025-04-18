@@ -329,7 +329,7 @@ std::tuple<std::vector<double>, double> G4GeorgeNurbs::ClosestPointParams(const 
   optimizer.set_xtol_rel(CONVERGENCE_TOLERANCE);
 
   // 3) Prepare context with reference to this surface and the target point
-  OptimizationContext context = {this, point};
+  ClostestPointContext context = {this, point};
 
   // 4) Set objective function and pass context
   optimizer.set_min_objective(G4GeorgeNurbs::ResidualToSurfacePoint, &context);
@@ -362,50 +362,89 @@ G4ThreeVector G4GeorgeNurbs::ClosestPoint(const G4ThreeVector& point) const
 }
 
 
-G4ThreeVector G4GeorgeNurbs::LineIntersection(const G4ThreeVector& P0,
-                                              const G4ThreeVector& direction,
-                                              double lambda_bound) const
+std::tuple<std::vector<double>, double, int> G4GeorgeNurbs::LineIntersectionParams(const G4ThreeVector& P0,
+                                                                                      const G4ThreeVector& direction,
+                                                                                      double line_length,
+                                                                                      std::vector<double>& uvl_guess) const
 {
+  // starting guess is the closest knot. TODO: deal with edge cases by varying initial guesses
 
-  std::vector<double> uvl = {0.5, 0.5, 0.0}; // initial guess
-
+  std::vector<double> uvl  = uvl_guess; // local copy to be used in optimisation
   nlopt::opt opt(nlopt::LN_NELDERMEAD, 3);
-  opt.set_xtol_rel(1e-6);
+  opt.set_xtol_rel(CONVERGENCE_TOLERANCE);
 
   // Set bounds for (u, v, lambda)
-  opt.set_lower_bounds({knotVectorU.front(), knotVectorV.front(), -std::abs(lambda_bound)});
-  opt.set_upper_bounds({knotVectorU.back(),  knotVectorV.back(),  std::abs(lambda_bound)});
+  opt.set_lower_bounds({knotVectorU.front(), knotVectorV.front(), 0});
+  opt.set_upper_bounds({knotVectorU.back(),  knotVectorV.back(),  line_length});
 
   LineIntersectionContext context = {
     this,
     P0,
-    direction.unit(),  // ensure it's a unit vector
-    lambda_bound
+    direction.unit()  // ensure it's a unit vector
   };
 
   opt.set_min_objective(G4GeorgeNurbs::ResidualLineDistance, &context);
 
-  double d_opt;
+  double residual_opt; // parameter to minimise: distance between P_surface(u,v) and P_line(l)
   try {
-    opt.optimize(uvl, d_opt);
+
+    opt.optimize(uvl, residual_opt);
     double u_opt = uvl[0];
     double v_opt = uvl[1];
-    double lambda_opt = uvl[2];
+    double l_opt = uvl[2];
 
-    if (std::abs(d_opt) > 1e-6 ||
-        std::signbit(lambda_opt) != std::signbit(lambda_bound) ||
-        std::abs(lambda_opt) > std::abs(lambda_bound)) {
-      return LARGE_THREE_VECTOR;
-        }
 
-    return SurfacePoint(u_opt, v_opt);
+    // dealing with invadid optimisation outputs
+    int exit_status{0}; // return to LineIntersection to deal with false optimisation 0 = success
+
+    if (std::abs(residual_opt) > CONVERGENCE_TOLERANCE)
+    {
+      // separation between P_surface and P_line != 0 meaning its not actually an intersection point.
+      // return invalid values for uvl and residual and pass exit_status 1
+      return std::make_tuple(uvl, residual_opt, 1);
+    }
+    if(std::abs(l_opt) > std::abs(line_length))
+    {
+      // intersection exists in given direction, but line too short
+      return std::make_tuple(uvl, residual_opt, 2);
+    }
+
+    // return successfully optimised params with exit_status 0
+    return std::make_tuple(uvl, residual_opt, 0);
+
   }
   catch (const std::exception& e) {
     G4cerr << "NLopt error in LineIntersection: " << e.what() << G4endl;
-    return LARGE_THREE_VECTOR;
+    return std::make_tuple(std::vector<double>{LARGE_NUMBER, LARGE_NUMBER}, LARGE_NUMBER, LARGE_NUMBER);
   }
 }
 
+
+G4ThreeVector G4GeorgeNurbs::LineIntersection(const G4ThreeVector& P0,
+                                              const G4ThreeVector& direction,
+                                              double line_length) const
+{
+  // intial
+  auto [closest_knot_start_point, R] = ClosestKnot(P0);
+  std::vector<double> uvl_guess = {closest_knot_start_point[0], closest_knot_start_point[0] , 0.0}; // initial guess for uvl
+  auto [uvl, r, exit_status] = LineIntersectionParams(P0, direction, line_length, uvl_guess);
+  if (exit_status == 0)
+  {
+    return SurfacePoint(uvl[0], uvl[1]);
+  }
+  if (exit_status == 1)
+  {
+    std::cout<<"convergence to non intersecting point. \nr = "<<r<<std::endl;
+    return LARGE_THREE_VECTOR;
+  }
+  if (exit_status == 2)
+  {
+    std::cout<<"line too short. \nr = "<<r<<std::endl;
+    return LARGE_THREE_VECTOR;
+  }
+
+
+}
 
 
 
@@ -421,7 +460,7 @@ double G4GeorgeNurbs::ResidualToSurfacePoint(const std::vector<double>& uv, std:
 
 
   // Unpacking context (contains the target point and pointer to the NURBS surface)
-  const auto* context = static_cast<G4GeorgeNurbs::OptimizationContext*>(data);
+  const auto* context = static_cast<G4GeorgeNurbs::ClostestPointContext*>(data);
   const G4GeorgeNurbs* nurbs = context->nurbs;
   const G4ThreeVector& target_point = context->target_point;
 

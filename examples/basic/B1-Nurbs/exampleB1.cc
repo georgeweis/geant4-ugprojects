@@ -199,7 +199,7 @@ int main(int argc, char** argv)
 
 
 
-  if(false) // wrapped arc nurbs surface to separate from torus tests
+  if(true) // wrapped arc nurbs surface to separate from torus tests
   {
 
   G4double r = 1;
@@ -375,7 +375,7 @@ int main(int argc, char** argv)
 
 
   // tests of torus shape =======================================================================================
-
+  /*
   std::vector<std::vector<G4ThreeVector>> torusControlPts = georgeTorus::getTorusControlPts();
   std::vector<std::vector<G4double>> torusWeights = georgeTorus::getTorusWeights();
 
@@ -447,7 +447,7 @@ int main(int argc, char** argv)
 
 
   delete torusNurbs;
-
+  */
 
 
 

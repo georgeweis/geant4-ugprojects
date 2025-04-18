@@ -82,9 +82,22 @@ class G4GeorgeNurbs : public G4VSolid
   // Calls ClosestPointParams for u, v and returns the surface point as a position vector.
   // Function adds no logic to but improves readability of code.
 
+
+
+  std::tuple<std::vector<double>, double, int> LineIntersectionParams(const G4ThreeVector& P0,
+                                                                         const G4ThreeVector& direction,
+                                                                         double line_length,
+                                                                         std::vector<double>& uvl_guess) const;
+  // Finds optimal u,v (parametrising surface) and l (parametrising line) of the closest intersection of the line
+  // passed though in the argument, and the Nurbs surface. Minimises ResidualLineDistance and returns a tuple of:
+  // - [u,v,l] - opimised values a vector of doubles
+  // - residual - minimised P_surface -> P_line distance as a double
+  // - exit_status - optimisation outcome as an int (0 = success, 1 = non-intersection, 2 = input line too short short for intersection)
+
+
   G4ThreeVector LineIntersection(const G4ThreeVector& P0,
                                  const G4ThreeVector& direction,
-                                 double lambda_bound) const;
+                                 double line_length) const;
   // finds the point of intersection between a line and a nurbs surface
 
 
@@ -100,7 +113,7 @@ class G4GeorgeNurbs : public G4VSolid
   // #ifdef GEANT4_USE_NLOPT
 
   // optimisation for ClosestPoint -------------------------------------
-  struct OptimizationContext
+  struct ClostestPointContext
   {
     const G4GeorgeNurbs* nurbs;
     G4ThreeVector target_point;
@@ -110,7 +123,7 @@ class G4GeorgeNurbs : public G4VSolid
                                        std::vector<double>& grad,
                                        void* data);
   // calculates the magnitude of the residual three-vector between a surface point (defined by uv)
-  // and a target point defined within OptimizationContext struct. Static function used because
+  // and a target point defined within ClostestPointContext struct. Static function used because
   // NLopt cannot deal with member functions and arguments grad and data are required for nlopt.
 
 
@@ -121,7 +134,6 @@ class G4GeorgeNurbs : public G4VSolid
     const G4GeorgeNurbs* nurbs;
     G4ThreeVector P0;
     G4ThreeVector direction; // should be unit vector
-    double max_lambda;
   };
 
   static double ResidualLineDistance(const std::vector<double>& uvl,
@@ -135,14 +147,6 @@ class G4GeorgeNurbs : public G4VSolid
 
 
   // #endif
-
-
-
-
-
-
-
-
 
 
 
