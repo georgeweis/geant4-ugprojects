@@ -51,6 +51,127 @@
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
+namespace georgeTorus{
+std::vector<std::vector<G4ThreeVector>> getTorusControlPts()
+{
+
+  std::vector<std::vector<G4ThreeVector>> controlPts =
+  {
+    {G4ThreeVector{-125, 0, 0},
+    G4ThreeVector{-125, 0, 125},
+    G4ThreeVector{0, 0, 125},
+    G4ThreeVector{125, 0, 125},
+    G4ThreeVector{125, 0, 0},
+    G4ThreeVector{125, 0, -125},
+    G4ThreeVector{0, 0, -125},
+    G4ThreeVector{-125, 0, -125},
+    G4ThreeVector{-125, 0, 0}},
+
+    {G4ThreeVector{-125, 100, 0},
+    G4ThreeVector{-125, 100, 125},
+    G4ThreeVector{0, 100, 125},
+    G4ThreeVector{125, 100, 125},
+    G4ThreeVector{125, 100, 0},
+    G4ThreeVector{125, 100, -125},
+    G4ThreeVector{0, 100, -125},
+    G4ThreeVector{-125, 100, -125},
+    G4ThreeVector{-125, 100, 0}},
+
+    {G4ThreeVector{-225, 100, 0},
+    G4ThreeVector{-225, 100, 225},
+    G4ThreeVector{0, 100, 225},
+    G4ThreeVector{225, 100, 225},
+    G4ThreeVector{225, 100, 0},
+    G4ThreeVector{225, 100, -225},
+    G4ThreeVector{0, 100, -225},
+    G4ThreeVector{-225, 100, -225},
+    G4ThreeVector{-225, 100, 0}},
+
+    {G4ThreeVector{-325, 100, 0},
+    G4ThreeVector{-325, 100, 325},
+    G4ThreeVector{0, 100, 325},
+    G4ThreeVector{325, 100, 325},
+    G4ThreeVector{325, 100, 0},
+    G4ThreeVector{325, 100, -325},
+    G4ThreeVector{0, 100, -325},
+    G4ThreeVector{-325, 100, -325},
+    G4ThreeVector{-325, 100, 0}},
+
+    {G4ThreeVector{-325, 0, 0},
+    G4ThreeVector{-325, 0, 325},
+    G4ThreeVector{0, 0, 325},
+    G4ThreeVector{325, 0, 325},
+    G4ThreeVector{325, 0, 0},
+    G4ThreeVector{325, 0, -325},
+    G4ThreeVector{0, 0, -325},
+    G4ThreeVector{-325, 0, -325},
+    G4ThreeVector{-325, 0, 0}},
+
+    {G4ThreeVector{-325, -100, 0},
+    G4ThreeVector{-325, -100, 325},
+    G4ThreeVector{0, -100, 325},
+    G4ThreeVector{325, -100, 325},
+    G4ThreeVector{325, -100, 0},
+    G4ThreeVector{325, -100, -325},
+    G4ThreeVector{0, -100, -325},
+    G4ThreeVector{-325, -100, -325},
+    G4ThreeVector{-325, -100, 0}},
+
+    {G4ThreeVector{-225, -100, 0},
+    G4ThreeVector{-225, -100, 225},
+    G4ThreeVector{0, -100, 225},
+    G4ThreeVector{225, -100, 225},
+    G4ThreeVector{225, -100, 0},
+    G4ThreeVector{225, -100, -225},
+    G4ThreeVector{0, -100, -225},
+    G4ThreeVector{-225, -100, -225},
+    G4ThreeVector{-225, -100, 0}},
+
+    {G4ThreeVector{-125, -100, 0},
+    G4ThreeVector{-125, -100, 125},
+    G4ThreeVector{0, -100, 125},
+    G4ThreeVector{125, -100, 125},
+    G4ThreeVector{125, -100, 0},
+    G4ThreeVector{125, -100, -125},
+    G4ThreeVector{0, -100, -125},
+    G4ThreeVector{-125, -100, -125},
+    G4ThreeVector{-125, -100, 0}},
+
+    {G4ThreeVector{-125, 0, 0},
+    G4ThreeVector{-125, 0, 125},
+    G4ThreeVector{0, 0, 125},
+    G4ThreeVector{125, 0, 125},
+    G4ThreeVector{125, 0, 0},
+    G4ThreeVector{125, 0, -125},
+    G4ThreeVector{0, 0, -125},
+    G4ThreeVector{-125, 0, -125},
+    G4ThreeVector{-125, 0, 0}},
+  };
+  return controlPts;
+}
+
+
+std::vector<std::vector<G4double>> getTorusWeights()
+{
+  std::vector<std::vector<G4double>> weights = {
+  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+  {0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707},
+  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+  {0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707},
+  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+  {0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707},
+  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+  {0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707},
+  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
+};
+  return weights;
+}
+
+}// namespace georgeTorus
+
+
+
+
 int main(int argc, char** argv)
 {
   //editing here means I only need to rebuild the example
@@ -64,6 +185,22 @@ int main(int argc, char** argv)
   */
 
   //nurbs class
+
+
+  // useful strings for output messages
+
+  std::string start_section = "-------------------------";
+  std::string end_section = "----------------------------------------------------------------------\n\n";
+
+
+
+
+
+
+
+
+  if(false) // wrapped arc nurbs surface to separate from torus tests
+  {
 
   G4double r = 1;
   std::vector<std::vector<G4ThreeVector>> controlPts = {
@@ -152,6 +289,7 @@ int main(int argc, char** argv)
   std::cout<<start_section<<"line intersection test"<<start_section <<"\n"<<std::endl;
 
   int SUB_TEST_NB = 2;
+
   G4ThreeVector p0;
   G4ThreeVector nline;
   double lambda_max;
@@ -229,13 +367,99 @@ int main(int argc, char** argv)
   std::cout << end_section;
   // ✅✅ same output as Python class --> Nurbs_Surface10_arc.py, TEST_NB = 6
 
-
-  // Inside
-
-
-
-
   delete georgeNurbs;
+
+  }// end of arc tests
+
+
+
+
+  // tests of torus shape =======================================================================================
+
+  std::vector<std::vector<G4ThreeVector>> torusControlPts = georgeTorus::getTorusControlPts();
+  std::vector<std::vector<G4double>> torusWeights = georgeTorus::getTorusWeights();
+
+  std::vector<G4double> torusKnotsU = {0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1};
+  std::vector<G4double> torusKnotsV = {0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1};
+
+  int torusDegreeU = 2;
+  int torusDegreeV = 2;
+
+
+  G4GeorgeNurbs* torusNurbs = new G4GeorgeNurbs("Nurbs Torus",
+                                                torusControlPts, torusWeights,
+                                                torusKnotsU, torusKnotsV,
+                                                torusDegreeU, torusDegreeV);
+
+
+//  torusNurbs->PrintVariables();
+
+
+  //inside/outsidee torus test
+  std::cout << start_section << "inside/outsise torus test" << start_section << "\n" << std::endl;
+
+  G4ThreeVector inside_pt = G4ThreeVector(20, 20, 200);
+  G4ThreeVector surface_pt = torusNurbs->ClosestPoint(inside_pt);
+  G4ThreeVector outside_pt = G4ThreeVector(10, 10, 10);
+
+  std::cout<<"inside_pt = "<<inside_pt<<std::endl;
+  std::cout<<"surface_pt = "<<surface_pt<<std::endl;
+  std::cout<<"outside_pt = "<<outside_pt<<std::endl;
+
+  std::cout<<"Output from torusNurbs->Inside(inside_pt): "<<torusNurbs->Inside(inside_pt)<<std::endl;
+  std::cout<<"Output from torusNurbs->Inside(surface_pt): "<<torusNurbs->Inside(surface_pt)<<std::endl;
+  std::cout<<"Output from torusNurbs->Inside(outside_pt): "<<torusNurbs->Inside(outside_pt)<<std::endl;
+
+
+  std::cout << end_section;
+  // ✅✅ seems to work fine --> Nurbs_Surface9_torus.py, TEST_NB = 3
+
+
+  //inside/outsidee torus test
+  std::cout << start_section << "DistanceToIn(p) / DistanceToOut(p)" << start_section << "\n" << std::endl;
+
+  std::cout << start_section<<std::endl;
+  std::cout<<"DistanceToIn(inside_pt): "<<torusNurbs->DistanceToIn(inside_pt)<<std::endl;
+  std::cout<<"DistanceToIn(surface_pt): "<<torusNurbs->DistanceToIn(surface_pt)<<std::endl;
+  std::cout<<"DistanceToIn(outside_pt): "<<torusNurbs->DistanceToIn(outside_pt)<<std::endl;
+
+  std::cout<<"\n";
+  std::cout<<"DistanceToOut(inside_pt): "<<torusNurbs->DistanceToOut(inside_pt)<<std::endl;
+  std::cout<<"DistanceToOut(surface_pt): "<<torusNurbs->DistanceToOut(surface_pt)<<std::endl;
+  std::cout<<"DistanceToOut(outside_pt): "<<torusNurbs->DistanceToOut(outside_pt)<<std::endl;
+  std::cout << start_section<<std::endl;
+
+
+  std::cout << end_section;
+  // ✅✅ seems to work fine
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  delete torusNurbs;
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   return 0;
 

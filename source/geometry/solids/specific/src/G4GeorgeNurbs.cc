@@ -268,7 +268,7 @@ std::vector<G4ThreeVector> G4GeorgeNurbs::SurfaceDerivatives(G4double u, G4doubl
 
 
 
-// Functions for optimisation techniques ================================================================
+// Functions using optimisation techniques ================================================================
 
 std::tuple<std::vector<double>, double> G4GeorgeNurbs::ClosestKnot(const G4ThreeVector& point) const
 {
@@ -343,7 +343,7 @@ std::tuple<std::vector<double>, double> G4GeorgeNurbs::ClosestPointParams(const 
   double optimised_residual;
 
   try {
-    nlopt::result result = optimizer.optimize(uv, optimised_residual); // changes value of uv during optimisation
+    optimizer.optimize(uv, optimised_residual); // changes value of uv during optimisation
 
 
     return std::make_tuple(uv, optimised_residual); // Return closest surface point
@@ -387,7 +387,7 @@ G4ThreeVector G4GeorgeNurbs::LineIntersection(const G4ThreeVector& P0,
 
   double d_opt;
   try {
-    nlopt::result result = opt.optimize(uvl, d_opt);
+    opt.optimize(uvl, d_opt);
     double u_opt = uvl[0];
     double v_opt = uvl[1];
     double lambda_opt = uvl[2];
@@ -416,6 +416,9 @@ double G4GeorgeNurbs::ResidualToSurfacePoint(const std::vector<double>& uv, std:
 {
   // definition of static function used by NLopt to compute the distance (residual)
   // between a surface point and a fixed target point.
+
+  (void)grad; // to suppress warning on build
+
 
   // Unpacking context (contains the target point and pointer to the NURBS surface)
   const auto* context = static_cast<G4GeorgeNurbs::OptimizationContext*>(data);
@@ -446,6 +449,8 @@ double G4GeorgeNurbs::ResidualLineDistance(const std::vector<double>& uvl,
   G4ThreeVector P_nurbs = context->nurbs->SurfacePoint(u, v);
   G4ThreeVector P_line = context->P0 + l * context->direction;
 
+  (void)grad; // to supress warning on build
+
   return (P_line - P_nurbs).mag(); // return distance between those two points
 }
 
@@ -470,7 +475,7 @@ EInside G4GeorgeNurbs::Inside(const G4ThreeVector& p) const
   // finding the residual from p --> closest_surf_pt
   G4ThreeVector residual = closest_surf_pt - p;
 
-  if (residual.mag() < 2*CONVERGENCE_TOLERANCE)
+  if (residual.mag() < CONVERGENCE_TOLERANCE)
   {
     // if the residual is of order of the CONVERGENCE_TOLERANCE, then p must be on the surface.
     return kSurface;
@@ -488,6 +493,8 @@ EInside G4GeorgeNurbs::Inside(const G4ThreeVector& p) const
 
 G4ThreeVector G4GeorgeNurbs::SurfaceNormal(const G4ThreeVector& p) const
 {
+  // finding the u,v parameters of the surface point with ClosestPointParams function.
+  // residual_from_p should be 0.
   auto [uv_from_p, residual_from_p] = ClosestPointParams(p);
   G4ThreeVector n = SurfaceNormal(uv_from_p[0], uv_from_p[1]);
   return n;
@@ -511,7 +518,17 @@ G4ThreeVector G4GeorgeNurbs::SurfaceNormal(const double u, const double v) const
 
 G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p) const
 {
-  return 0.0;
+  // first check if point is already inside or on surface, return 0 if so
+  EInside inside_status = Inside(p);
+  if (inside_status == kInside || inside_status == kSurface) {
+    return 0;
+  }
+
+  // find the closest surface point using ClosestPointParams function
+  auto [uv, residual_from_p] = ClosestPointParams(p);
+
+  // return the minimised distance
+  return residual_from_p;
 }
 
 G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVector& v) const
@@ -521,6 +538,19 @@ G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVecto
 
 G4double G4GeorgeNurbs::DistanceToOut(const G4ThreeVector& p) const
 {
+  // first check if point is already outside, return 0 if so
+  EInside inside_status = Inside(p);
+  if (inside_status == kOutside) {
+    return 0;
+  }
+
+  // find the closest point on the surface using ClosestPointParams function
+  auto [uv, residual_from_p] = ClosestPointParams(p);
+
+  // return the minimised distance
+  return residual_from_p;
+
+
   return 0.0;
 }
 
