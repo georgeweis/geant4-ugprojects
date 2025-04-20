@@ -667,21 +667,27 @@ std::tuple<std::vector<double>, double> G4GeorgeNurbs::FirstIntersectionTest(std
 {
   // STEP 3: check whether the intersection found after pushing is the first intersection. If not, find it.
 
+  // declaring variables
+  std::vector<double> uvl_check_opt; // optimised result after pushing
+  double residual_check_opt; // optimised residual after pushing
+  bool opt_success; // successful optimisation flag (unused in checks)
+  std::string output_message;
+
+
   // optimise from a new point at some fraction of the way between l_opt_old and l_opt_pushed
   double l_check = uvl_opt_old[2] + 0.6*uvl_opt_pushed[2]; // a little over half the separation
   G4ThreeVector P_check = P0 + l_check*direction; // new location from l_check
   auto [closest_knot_check, R] = ClosestKnot(P_check);
   std::vector<double> uvl_check_guess = {closest_knot_check[0], closest_knot_check[1] , l_check};
-  auto [uvl_check_opt, residual_check_opt, opt_success] = LineIntersectionOpt(P0, direction, line_length, uvl_check_guess);
+  std::tie(uvl_check_opt, residual_check_opt, opt_success) = LineIntersectionOpt(P0, direction, line_length, uvl_check_guess);
 
 
 
   /* Check 11: does this optimise to the same point?  */
-  std::string output_message;
   if (std::abs(uvl_opt_pushed[2]-uvl_check_opt[2]) < 2*SURFACE_TOLERANCE) // yes to check 11
   {
     output_message = std::string("✅ Successful convergence to a validated intersection at STEP 3, Check 11. \n" )+
-                     "(check point same as pushed, accept this point)" +;
+                     "(check point same as pushed, accept this point)";
     PrintIntersectionOutcome(output_message, uvl_check_guess, uvl_check_opt, residual_check_opt, P0, direction);
     return std::make_tuple(uvl_check_opt, residual_check_opt); // accept point (uvl_check_opt=uvl_opt_old here)
   }
@@ -696,6 +702,7 @@ std::tuple<std::vector<double>, double> G4GeorgeNurbs::FirstIntersectionTest(std
   }
 
   /* Check 13: do the optimised u or v = the ends of their knot vectors? */
+
   auto [new_uvl_check_guess, reached_knot_bounds] = CheckKnotBounds(uvl_check_opt, uvl_check_guess);
   uvl_check_guess = new_uvl_check_guess;
   if (!reached_knot_bounds) // no to check 13
@@ -711,7 +718,7 @@ std::tuple<std::vector<double>, double> G4GeorgeNurbs::FirstIntersectionTest(std
   if (reached_knot_bounds) // yes to check 13
   {
     // redo optimisation with new initial knot guesses
-    auto [uvl_check_opt, residual_check_opt, opt_success] = LineIntersectionOpt(P0, direction, line_length, uvl_check_guess);
+    std::tie(uvl_check_opt, residual_check_opt, opt_success) = LineIntersectionOpt(P0, direction, line_length, uvl_check_guess);
   }
 
   /* Check 14: after changing knot vectors, is this check point an intersection? */
