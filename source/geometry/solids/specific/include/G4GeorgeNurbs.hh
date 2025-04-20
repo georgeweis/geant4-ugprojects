@@ -17,6 +17,8 @@
 class G4GeorgeNurbs : public G4VSolid
 {
   private:
+
+  // variables required for a nurbs surface
   std::vector<std::vector<G4ThreeVector>> controlPts;
   std::vector<std::vector<G4double>> weights;
   std::vector<G4double> knotVectorU;
@@ -24,9 +26,19 @@ class G4GeorgeNurbs : public G4VSolid
   G4int degreeU;
   G4int degreeV;
 
+  // bounding variables
+  G4ThreeVector bminCached, bmaxCached;
+  G4double maxExtent;
+  G4bool boundsCached;
+
+
+
+  // static variables
   static double LARGE_NUMBER;
   static G4ThreeVector LARGE_THREE_VECTOR;
   static double CONVERGENCE_TOLERANCE;
+  static double SURFACE_TOLERANCE;
+
 
 
   public:
@@ -84,16 +96,45 @@ class G4GeorgeNurbs : public G4VSolid
 
 
 
-  std::tuple<std::vector<double>, double, int> LineIntersectionParams(const G4ThreeVector& P0,
-                                                                         const G4ThreeVector& direction,
-                                                                         double line_length,
-                                                                         std::vector<double>& uvl_guess) const;
+  std::tuple<std::vector<double>, double, bool> LineIntersectionOpt(const G4ThreeVector& P0,
+                                                                   const G4ThreeVector& direction,
+                                                                   double line_length,
+                                                                   std::vector<double>& uvl_guess) const;
   // Finds optimal u,v (parametrising surface) and l (parametrising line) of the closest intersection of the line
   // passed though in the argument, and the Nurbs surface. Minimises ResidualLineDistance and returns a tuple of:
-  // - [u,v,l] - opimised values a vector of doubles
+  // - [u,v,l] - opimised values as vector of doubles
   // - residual - minimised P_surface -> P_line distance as a double
-  // - exit_status - optimisation outcome as an int (0 = success, 1 = non-intersection, 2 = input line too short short for intersection)
+  // - successful_opt - check whether optimisation produced an error.
 
+  void PrintIntersectionOutcome(std::string output_message, std::vector<double> uvl_guess,
+                                std::vector<double> uvl_opt, double residual,
+                                const G4ThreeVector& P0, const G4ThreeVector& direction) const;
+  // print statement for LineIntersectionOpt outcomes
+
+  std::tuple<std::vector<double>,bool> CheckKnotBounds(std::vector<double>& uvl_opt, std::vector<double>& uvl_guess) const;
+  // if LineIntersectionOpt finds a minimum that is not an intersection, this fucniton is called to check whether
+  // it could be due to reaching the end of a knot vector. If the start/end of the u or v knot vector is reached, the
+  // initial guess is set to the value at the other end. Returns a tuple of:
+  // - new_uvl_guess - suggested new initial guess parameters as a vector of doubles
+  // - reached_knot_boundary - flag if condition met as a bool
+
+  std::tuple<std::vector<double>, double> LineIntersectionParams(const G4ThreeVector& P0,
+                                                                 const G4ThreeVector& direction,
+                                                                 double line_length) const;
+  // processes LineIntersectionOpt and applies logic for boundary cases. Returns a tuple of:
+  // - [uvl_opt] - validated optimised parameters as vector of doubles
+  // - R_opt - residual at optimisation as a double
+
+  std::tuple<std::vector<double>, double> PushLGuess(std::vector<double> uvl_opt_old,
+                                                     double push_length,
+                                                     const G4ThreeVector& P0,
+                                                     const G4ThreeVector& direction,
+                                                     double line_length) const;
+  std::tuple<std::vector<double>, double> FirstIntersectionTest(std::vector<double> uvl_opt_old,
+                                                                std::vector<double> uvl_opt_pushed,
+                                                                const G4ThreeVector& P0,
+                                                                const G4ThreeVector& direction,
+                                                                double line_length) const;
 
   G4ThreeVector LineIntersection(const G4ThreeVector& P0,
                                  const G4ThreeVector& direction,
@@ -134,7 +175,8 @@ class G4GeorgeNurbs : public G4VSolid
     const G4GeorgeNurbs* nurbs;
     G4ThreeVector P0;
     G4ThreeVector direction; // should be unit vector
-  };
+    mutable int call_count = 0;
+    };
 
   static double ResidualLineDistance(const std::vector<double>& uvl,
                                      std::vector<double>& grad,
@@ -180,15 +222,21 @@ class G4GeorgeNurbs : public G4VSolid
   G4ThreeVector GetPointOnSurface() const override;
 
   G4VisExtent GetExtent() const override;
+
   G4bool CalculateExtent( const EAxis pAxis,
                           const G4VoxelLimits& pVoxelLimit,
                           const G4AffineTransform& pTransform,
                                 G4double& pMin, G4double& pMax ) const override;
 
+
   void DescribeYourselfTo ( G4VGraphicsScene& scene ) const override;
   std::ostream& StreamInfo(std::ostream& os) const override;
   G4GeometryType GetEntityType() const override;
 
+  void SetBoundingLimits();
+
+  std::vector<G4ThreeVector> GetBounds() const;
+  G4double GetMaxExtent() const;
 
 
   void ValidateKnotVectors() const;

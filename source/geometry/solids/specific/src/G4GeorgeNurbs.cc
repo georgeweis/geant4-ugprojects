@@ -35,6 +35,7 @@
 double G4GeorgeNurbs::LARGE_NUMBER = 1e6;
 G4ThreeVector G4GeorgeNurbs::LARGE_THREE_VECTOR = G4ThreeVector( 1e6,  1e6,  1e6);
 double G4GeorgeNurbs::CONVERGENCE_TOLERANCE = 1e-6;
+double G4GeorgeNurbs::SURFACE_TOLERANCE = 1e-3;
 
 
 
@@ -56,6 +57,7 @@ G4GeorgeNurbs::G4GeorgeNurbs(const G4String& name,
   degreeV(degreeV_in)
 {
   ValidateKnotVectors();
+  SetBoundingLimits();
 }
 
 G4GeorgeNurbs::~G4GeorgeNurbs() = default;
@@ -325,7 +327,7 @@ std::tuple<std::vector<double>, double> G4GeorgeNurbs::ClosestPointParams(const 
   std::vector<double> uv_guess = uv_closes_knot;
 
   // 2) Set up the NLopt optimizer (Nelder-Mead, 2D problem)
-  nlopt::opt optimizer(nlopt::LN_NELDERMEAD, 2);
+  nlopt::opt optimizer(nlopt::LN_COBYLA, 2);
   optimizer.set_xtol_rel(CONVERGENCE_TOLERANCE);
 
   // 3) Prepare context with reference to this surface and the target point
@@ -362,21 +364,21 @@ G4ThreeVector G4GeorgeNurbs::ClosestPoint(const G4ThreeVector& point) const
 }
 
 
-std::tuple<std::vector<double>, double, int> G4GeorgeNurbs::LineIntersectionParams(const G4ThreeVector& P0,
-                                                                                      const G4ThreeVector& direction,
-                                                                                      double line_length,
-                                                                                      std::vector<double>& uvl_guess) const
+std::tuple<std::vector<double>, double, bool> G4GeorgeNurbs::LineIntersectionOpt(const G4ThreeVector& P0,
+                                                                                const G4ThreeVector& direction,
+                                                                                double line_length,
+                                                                                std::vector<double>& uvl_guess) const
 {
-  // starting guess is the closest knot. TODO: deal with edge cases by varying initial guesses
-
-  std::vector<double> uvl  = uvl_guess; // local copy to be used in optimisation
-  nlopt::opt opt(nlopt::LN_NELDERMEAD, 3);
+  // set up optimiser
+  nlopt::opt opt(nlopt::LN_COBYLA, 3);
   opt.set_xtol_rel(CONVERGENCE_TOLERANCE);
 
-  // Set bounds for (u, v, lambda)
-  opt.set_lower_bounds({knotVectorU.front(), knotVectorV.front(), 0});
-  opt.set_upper_bounds({knotVectorU.back(),  knotVectorV.back(),  line_length});
+  // Set bounds for (u, v, l)
+  opt.set_lower_bounds({knotVectorU.front(), knotVectorV.front(), 0}); // lower bounds uv usually 0 and l always 0
+  opt.set_upper_bounds({knotVectorU.back(),  knotVectorV.back(),  line_length}); // upper bounds are the end of the
+                                                                               // knot vectors and the argument line_length
 
+  // set context of the line.
   LineIntersectionContext context = {
     this,
     P0,
@@ -385,70 +387,359 @@ std::tuple<std::vector<double>, double, int> G4GeorgeNurbs::LineIntersectionPara
 
   opt.set_min_objective(G4GeorgeNurbs::ResidualLineDistance, &context);
 
+
+
+  // starting guess for uvl_opt is passed throgh in the argument
+  std::vector<double> uvl_opt  = uvl_guess;
+
   double residual_opt; // parameter to minimise: distance between P_surface(u,v) and P_line(l)
+  bool successful_optimisation; // result of optimisation
   try {
 
-    opt.optimize(uvl, residual_opt);
-    double u_opt = uvl[0];
-    double v_opt = uvl[1];
-    double l_opt = uvl[2];
+    opt.optimize(uvl_opt, residual_opt);
+
+    // debug
+    G4cout << "LineIntersectionOpt: objective evaluated "
+         << context.call_count << " times." << G4endl;
 
 
-    // dealing with invadid optimisation outputs
-    int exit_status{0}; // return to LineIntersection to deal with false optimisation 0 = success
-
-    if (std::abs(residual_opt) > CONVERGENCE_TOLERANCE)
-    {
-      // separation between P_surface and P_line != 0 meaning its not actually an intersection point.
-      // return invalid values for uvl and residual and pass exit_status 1
-      return std::make_tuple(uvl, residual_opt, 1);
-    }
-    if(std::abs(l_opt) > std::abs(line_length))
-    {
-      // intersection exists in given direction, but line too short
-      return std::make_tuple(uvl, residual_opt, 2);
-    }
 
     // return successfully optimised params with exit_status 0
-    return std::make_tuple(uvl, residual_opt, 0);
+    successful_optimisation = true;
+    return std::make_tuple(uvl_opt, residual_opt, successful_optimisation);
 
   }
   catch (const std::exception& e) {
     G4cerr << "NLopt error in LineIntersection: " << e.what() << G4endl;
-    return std::make_tuple(std::vector<double>{LARGE_NUMBER, LARGE_NUMBER}, LARGE_NUMBER, LARGE_NUMBER);
+    successful_optimisation = false;
+    return std::make_tuple(std::vector<double>{LARGE_NUMBER, LARGE_NUMBER, LARGE_NUMBER},
+                           LARGE_NUMBER,
+                           successful_optimisation);
   }
 }
 
 
-G4ThreeVector G4GeorgeNurbs::LineIntersection(const G4ThreeVector& P0,
-                                              const G4ThreeVector& direction,
-                                              double line_length) const
+void G4GeorgeNurbs::PrintIntersectionOutcome(std::string output_message,
+                                             std::vector<double> uvl_guess,
+                                             std::vector<double> uvl_opt,
+                                             double residual,
+                                             const G4ThreeVector& P0,
+                                             const G4ThreeVector& direction) const
 {
-  // intial
-  auto [closest_knot_start_point, R] = ClosestKnot(P0);
-  std::vector<double> uvl_guess = {closest_knot_start_point[0], closest_knot_start_point[0] , 0.0}; // initial guess for uvl
-  auto [uvl, r, exit_status] = LineIntersectionParams(P0, direction, line_length, uvl_guess);
-  if (exit_status == 0)
-  {
-    return SurfacePoint(uvl[0], uvl[1]);
+  G4ThreeVector P_surface = SurfacePoint(uvl_opt[0], uvl_opt[1]);
+  G4ThreeVector P_line = (P0 + uvl_opt[2]*direction);
+
+  std::cout<<output_message<<"\n"
+           <<"Initial uvl guess: ("<<uvl_guess[0]<<", "<<uvl_guess[1]<<", "<<uvl_guess[2]<<")\n"
+           <<"P_surface (u,v): ("<<uvl_opt[0]<<","<< uvl_opt[1]<<")"<<"\n"
+           <<"P_surface (x,y,z): "<<P_surface<<"\n"
+           <<"P_line: "<<P_line<<"\n"
+           <<"Convergence l = "<<uvl_opt[2] <<"\n"
+           <<"Convergence residual = "<<residual<<"\n"
+
+           <<"\nFor python: \n"
+           <<"P_suf = np.array(["<<P_surface.x()<<","<<P_surface.y()<<","<<P_surface.z()<<"], dtype = float)"<<"\n"
+           <<"P_line = np.array(["<<P_line.x()<<","<<P_line.y()<<","<<P_line.z()<<"], dtype = float)"<<"\n"
+           <<std::endl;
+}
+
+std::tuple<std::vector<double>,bool> G4GeorgeNurbs::CheckKnotBounds(std::vector<double>& uvl_opt,
+                                                                    std::vector<double>& uvl_guess) const
+{
+  std::vector<double> new_uvl_guess = uvl_guess; // local copy to be edited with following if statements
+  bool reached_knot_boundary = false; // flag to indicate if the optimised u,v params are at the end of their vector.
+
+  // if u,v params are at the end of the knot vector, change initial guess to other end and set reached_knot_boundary to true
+  double tolerance = 0.001;
+  if(uvl_opt[0] <(knotVectorU.front() + tolerance)){
+    new_uvl_guess[0] = knotVectorU.back(); reached_knot_boundary = true;
   }
-  if (exit_status == 1)
-  {
-    std::cout<<"convergence to non intersecting point. \nr = "<<r<<std::endl;
-    return LARGE_THREE_VECTOR;
-  }
-  if (exit_status == 2)
-  {
-    std::cout<<"line too short. \nr = "<<r<<std::endl;
-    return LARGE_THREE_VECTOR;
+  else if(uvl_opt[0] >(knotVectorU.back() - tolerance)){
+    new_uvl_guess[0] = knotVectorU.front(); reached_knot_boundary = true;
   }
 
+  if(uvl_opt[1] <(knotVectorV.front() + tolerance)){
+    new_uvl_guess[1] = knotVectorV.back(); reached_knot_boundary = true;
+  }
+  else if(uvl_opt[1] >(knotVectorV.back() - tolerance)){
+    new_uvl_guess[1] = knotVectorV.front(); reached_knot_boundary = true;
+  }
 
+  if (reached_knot_boundary)
+  {
+    std::cout<<"Knot boundary checks failed."<<std::endl;
+    return std::make_tuple(new_uvl_guess, reached_knot_boundary); // return new inital guess parameters
+  }
+
+  std::cout<<"Knot boundary checks passed."<<std::endl;
+  return std::make_tuple(uvl_guess, reached_knot_boundary); // return original inital guess parameters
 }
 
 
 
-// Static functions and structs used in optimisation =============================================================
+
+std::tuple<std::vector<double>, double> G4GeorgeNurbs::LineIntersectionParams(const G4ThreeVector& P0,
+                                                                              const G4ThreeVector& direction,
+                                                                              double line_length) const
+{
+  std::vector<double> uvl_opt;
+  double residual_opt;
+  bool opt_success;
+
+
+  // STEP 1: Initial optimisation from start point of line
+  auto [closest_knot_start_point, R] = ClosestKnot(P0); // guess for uv is the closest knot to P0
+  std::vector<double> uvl_guess = {closest_knot_start_point[0], closest_knot_start_point[1] , 0.0}; // initial l is 0
+  std::tie(uvl_opt, residual_opt, opt_success) = LineIntersectionOpt(P0, direction, line_length, uvl_guess);
+
+
+  // declaring variables to be overwritten
+  std::string output_message;
+
+  /* Check 1: is this a intersection point (residual = 0)? */
+  if (residual_opt<SURFACE_TOLERANCE) // yes to check 1
+  {
+    /* Check 2: is this intersection at P0 (meaning the line started ON the surface)?  */
+    if (uvl_opt[2] < SURFACE_TOLERANCE) // yes to check 2
+    {
+      auto result = PushLGuess(uvl_opt, maxExtent/4,  P0, direction, line_length);
+      return result;
+    }
+
+    // yes to check 1 and no to check 2: intersection is likely the first intersection
+    output_message = "✅ Successful convergence to an intersection at STEP 1, Check 2.";
+    PrintIntersectionOutcome(output_message, uvl_guess, uvl_opt, residual_opt, P0, direction);
+    return std::make_tuple(uvl_opt, residual_opt);
+  }
+  output_message = "❌ Convergence to a non-intersecting point at STEP 1, check 2. ";
+  PrintIntersectionOutcome(output_message, uvl_guess, uvl_opt, residual_opt, P0, direction);
+
+  /* Check 3: does u_opt or v_opt = the ends of their knot vectors?  */
+  auto [uvl_guess_knot, reached_knot_bounds] = CheckKnotBounds(uvl_opt, uvl_guess);
+  uvl_guess = uvl_guess_knot;
+
+
+
+
+  if (reached_knot_bounds) // yes to check 3
+  {
+    // redo optimisation with new initial knot guesses
+    std::tie(uvl_opt, residual_opt, opt_success) = LineIntersectionOpt(P0, direction, line_length, uvl_guess);
+
+    /* Check 4: is this now an intersection point (residual = 0)?  */
+    if (residual_opt<SURFACE_TOLERANCE) // yes to check 4
+    {
+      /* Check 5: is this intersection at P0 (meaning the line started ON the surface)?  */
+      if (uvl_opt[2] > SURFACE_TOLERANCE) // no to check 5
+      {
+        output_message = "✅ Successful convergence to an intersection at STEP 1, check 3 knot vector change.";
+        PrintIntersectionOutcome(output_message, uvl_guess, uvl_opt, residual_opt, P0, direction);
+        return std::make_tuple(uvl_opt, residual_opt); // accept point
+      }
+    }
+  }
+
+  output_message = "❌ Convergence to a non-intersecting point at STEP 1, check 2. ";
+  PrintIntersectionOutcome(output_message, uvl_guess, uvl_opt, residual_opt, P0, direction);
+
+  // All logic streams now require the intial guess value of l to be push along the line to search for a new intersection.
+  // Possible cases: optimised to start of line as a surface point or optimised to a close approach. Neither are intersections.
+  // Done in a separate function but Check and STEP numbers follow on from this point.
+
+  auto result = PushLGuess(uvl_opt, maxExtent/4,  P0, direction, line_length);
+
+  return result;
+
+}
+
+std::tuple<std::vector<double>, double> G4GeorgeNurbs::PushLGuess(std::vector<double> uvl_opt_old,
+                                                                  double push_length,
+                                                                  const G4ThreeVector& P0,
+                                                                  const G4ThreeVector& direction,
+                                                                  double line_length) const
+{
+  (void)push_length; // supress for now, may be used in future development
+
+  // declaring variables to be overwritten
+  std::vector<double> uvl_pushed_opt; // optimised result after pushing
+  double residual_pushed_opt; // optimised residual after pushing
+  bool opt_success; // successful optimisation flag (unused in checks)
+
+  std::vector<double> closest_knot_pushed;
+  double R;
+  std::string output_message;
+
+
+  // STEP 2: push the initial guess along the line and optimise from the 'pushed' point
+
+  double l_pushed = uvl_opt_old[2] + maxExtent/4;
+  G4ThreeVector P_pushed = P0 + l_pushed*direction; // new location from l_pushed
+  std::tie(closest_knot_pushed, R) = ClosestKnot(P_pushed);
+  std::vector<double> uvl_pushed_guess = {closest_knot_pushed[0], closest_knot_pushed[1] , l_pushed};
+  std::tie(uvl_pushed_opt, residual_pushed_opt, opt_success) = LineIntersectionOpt(P0, direction, line_length, uvl_pushed_guess);
+
+  output_message = "🌀 Output after first push by "+ std::to_string(l_pushed);
+  PrintIntersectionOutcome(output_message, uvl_pushed_guess, uvl_pushed_opt, residual_pushed_opt, P0, direction);
+
+
+   /* Check 6: has this optimisation with a pushed l landed on the same spot?  */
+  if (std::abs(uvl_opt_old[2]-uvl_pushed_opt[2]) < 2*SURFACE_TOLERANCE) // yes to check 6
+  {
+    /* Check 7: do both of these optimised l values = 0?  */
+    if (uvl_opt_old[2] < SURFACE_TOLERANCE) // yes to check 7
+    {
+      std::cout <<"❌ line found to be pointing away from all points on surface at STEP 2, Check 7. \n"
+                <<"Returning LARGE_NUMBERs."<<std::endl;
+
+      output_message = "Last intersection. ";
+      PrintIntersectionOutcome(output_message, uvl_pushed_guess, uvl_pushed_opt, residual_pushed_opt, P0, direction);
+
+      return std::make_tuple(std::vector<double>(3, LARGE_NUMBER), LARGE_NUMBER);
+    }
+    // push again by 2 times the origional push length and optimise again from this new pushed point
+    l_pushed = uvl_opt_old[2] + maxExtent/2; // new l is the
+    P_pushed = P0 + l_pushed*direction; // new location from l_pushed
+    std::tie(closest_knot_pushed, R) = ClosestKnot(P_pushed);
+    uvl_pushed_guess = {closest_knot_pushed[0], closest_knot_pushed[1] , l_pushed};
+    std::tie(uvl_pushed_opt, residual_pushed_opt, opt_success) = LineIntersectionOpt(P0, direction, line_length, uvl_pushed_guess);
+
+    output_message = "🌀 Output after second pushing by "+ std::to_string(l_pushed);
+    PrintIntersectionOutcome(output_message, uvl_pushed_guess, uvl_pushed_opt, residual_pushed_opt, P0, direction);
+  }
+
+
+
+
+  /* Check 8: is this new pushed minimum an intersction (residual = 0)?  */
+  if (residual_pushed_opt<SURFACE_TOLERANCE) // yes to check 8
+  {
+    std::cout<< "\n - Entered if statement at check 8 (yes to intersection after push?)\n"<<std::endl;
+    auto result = FirstIntersectionTest(uvl_opt_old, uvl_pushed_opt, P0,direction, line_length);
+    return result;
+  }
+
+  /* Check 9: do the optimised u or v = the ends of their knot vectors?  */
+
+  auto [uvl_pushed_guess_knot, reached_knot_bounds] = CheckKnotBounds(uvl_pushed_opt, uvl_pushed_guess);
+  uvl_pushed_guess = uvl_pushed_guess_knot;
+  uvl_pushed_guess[2] = uvl_pushed_opt[2]; // a close point was found, start with same l guess
+
+  if (reached_knot_bounds) // yes to check 9
+  {
+    std::cout<< "\n - Entered if statement at check 9 (yes to reached_knot_bounds?)\n"<<std::endl;
+    // redo optimisation with new initial knot guesses
+    std::tie(uvl_pushed_opt, residual_pushed_opt, opt_success) = LineIntersectionOpt(P0, direction, line_length, uvl_pushed_guess);
+    std::cout << "====uvl_pushed_opt at 9: "<<uvl_pushed_opt[0]<<"," <<uvl_pushed_opt[1]<<","<<uvl_pushed_opt[2]<<"," << std::endl;
+  }
+  std::cout << "====uvl_pushed_opt at 9: "<<uvl_pushed_opt[0]<<"," <<uvl_pushed_opt[1]<<","<<uvl_pushed_opt[2]<<"," << std::endl;
+
+  /* Check 10: is this new pushed value an intersection (residual = 0)?  */
+  if (residual_pushed_opt>SURFACE_TOLERANCE) // no to check 10
+  {
+    std::cout <<"❌ line does not intersect at any points, confirmed at STEP 2, Check 10. \n"
+                <<"Returning LARGE_NUMBERs."<<std::endl;
+    output_message = "Last intersection. ";
+    PrintIntersectionOutcome(output_message, uvl_pushed_guess, uvl_pushed_opt, residual_pushed_opt, P0, direction);
+    return std::make_tuple(std::vector<double>(3, LARGE_NUMBER), LARGE_NUMBER);
+  }
+
+  // All logic streams now require a test to confirm that the found intersection is actually the first intersection.
+  // Done in function FirstIntersectionTest, with test and check numbers continuing
+
+
+  output_message = "❓ Intersection should have been found at the end of STEP 2. Current values: ";
+  PrintIntersectionOutcome(output_message, uvl_pushed_guess, uvl_pushed_opt, residual_pushed_opt, P0, direction);
+
+
+  auto result = FirstIntersectionTest(uvl_opt_old, uvl_pushed_opt, P0,direction, line_length);
+
+
+  return result;
+}
+
+
+
+std::tuple<std::vector<double>, double> G4GeorgeNurbs::FirstIntersectionTest(std::vector<double> uvl_opt_old,
+                                                                             std::vector<double> uvl_opt_pushed,
+                                                                             const G4ThreeVector& P0,
+                                                                             const G4ThreeVector& direction,
+                                                                             double line_length) const
+{
+  // STEP 3: check whether the intersection found after pushing is the first intersection. If not, find it.
+
+  // optimise from a new point at some fraction of the way between l_opt_old and l_opt_pushed
+  double l_check = uvl_opt_old[2] + 0.6*uvl_opt_pushed[2]; // a little over half the separation
+  G4ThreeVector P_check = P0 + l_check*direction; // new location from l_check
+  auto [closest_knot_check, R] = ClosestKnot(P_check);
+  std::vector<double> uvl_check_guess = {closest_knot_check[0], closest_knot_check[1] , l_check};
+  auto [uvl_check_opt, residual_check_opt, opt_success] = LineIntersectionOpt(P0, direction, line_length, uvl_check_guess);
+
+
+
+  /* Check 11: does this optimise to the same point?  */
+  std::string output_message;
+  if (std::abs(uvl_opt_pushed[2]-uvl_check_opt[2]) < 2*SURFACE_TOLERANCE) // yes to check 11
+  {
+    output_message = std::string("✅ Successful convergence to a validated intersection at STEP 3, Check 11. \n" )+
+                     "(check point same as pushed, accept this point)" +;
+    PrintIntersectionOutcome(output_message, uvl_check_guess, uvl_check_opt, residual_check_opt, P0, direction);
+    return std::make_tuple(uvl_check_opt, residual_check_opt); // accept point (uvl_check_opt=uvl_opt_old here)
+  }
+
+  /* Check 12: is this point an intersection? */
+  if (residual_check_opt<SURFACE_TOLERANCE) // yes to check 12
+  {
+    output_message = std::string("✅ Successful convergence to a validated intersection at STEP 3, Check 12.\n") +
+                     "(check point is a different to pushed, accept check point)";
+    PrintIntersectionOutcome(output_message, uvl_check_guess, uvl_check_opt, residual_check_opt, P0, direction);
+    return std::make_tuple(uvl_check_opt, residual_check_opt); // accept check point
+  }
+
+  /* Check 13: do the optimised u or v = the ends of their knot vectors? */
+  auto [new_uvl_check_guess, reached_knot_bounds] = CheckKnotBounds(uvl_check_opt, uvl_check_guess);
+  uvl_check_guess = new_uvl_check_guess;
+  if (!reached_knot_bounds) // no to check 13
+  {
+    output_message = std::string("✅ Successful convergence to a validated intersection at STEP 3, Check 13. \n" )+
+                     "(check point is a close approach, accept pushed point)";
+
+    std::vector<double> unknown_initial_guess = {101,101,101};
+    PrintIntersectionOutcome(output_message, unknown_initial_guess, uvl_opt_pushed, 0, P0, direction); // inital guess lost
+    return std::make_tuple(uvl_opt_pushed, 0); // accept pushed point. Residual value not known here so assumed as 0
+  }
+
+  if (reached_knot_bounds) // yes to check 13
+  {
+    // redo optimisation with new initial knot guesses
+    auto [uvl_check_opt, residual_check_opt, opt_success] = LineIntersectionOpt(P0, direction, line_length, uvl_check_guess);
+  }
+
+  /* Check 14: after changing knot vectors, is this check point an intersection? */
+  if (residual_check_opt<SURFACE_TOLERANCE) //yes to check 14
+  {
+    output_message = std::string("✅ Successful convergence to a validated intersection at STEP 3, Check 14. \n")+
+                     "(check point is a different to pushed, accept pushed point)";
+    PrintIntersectionOutcome(output_message, uvl_check_guess, uvl_check_opt, residual_check_opt, P0, direction);
+    return std::make_tuple(uvl_check_opt, residual_check_opt); // accept check point
+  }
+
+  if (residual_check_opt>SURFACE_TOLERANCE) // no to check 14
+  {
+    output_message = std::string("✅ Successful convergence to a validated intersection at STEP 3, Check 14. \n" )+
+                     "(check point is a close approach, accept pushed point)";
+    std::vector<double> unknown_initial_guess = {101,101,101};
+    PrintIntersectionOutcome(output_message, unknown_initial_guess, uvl_opt_pushed, 0, P0, direction); // inital guess lost
+    return std::make_tuple(uvl_opt_pushed, 0); // accept pushed point. Residual value not known here so assumed as 0
+  }
+
+  std::cout <<"❌ logic error, case not identified after check 14 \n"
+            <<"Returning LARGE_NUMBERs."<<std::endl;
+  return std::make_tuple(std::vector<double>(3, LARGE_NUMBER), LARGE_NUMBER);
+
+}
+
+
+// Static functions  used in optimisation =============================================================
 
 // #ifdef GEANT4_USE_NLOPT //
 double G4GeorgeNurbs::ResidualToSurfacePoint(const std::vector<double>& uv, std::vector<double>& grad, void* data)
@@ -478,28 +769,42 @@ double G4GeorgeNurbs::ResidualLineDistance(const std::vector<double>& uvl,
                                            std::vector<double>& grad,
                                            void* data)
 {
+
   // function to optimise in LineIntersection.
   const auto* context = static_cast<LineIntersectionContext*>(data);
+  context->call_count++;
 
   double u = uvl[0]; // u and v parametrises a point on the surface
   double v = uvl[1];
   double l = uvl[2]; // l parametrises a point on the line
+
+
+
+
 
   G4ThreeVector P_nurbs = context->nurbs->SurfacePoint(u, v);
   G4ThreeVector P_line = context->P0 + l * context->direction;
 
   (void)grad; // to supress warning on build
 
+
+  // debug
+//  std::cout<<"u,v = "<<u<<" , "<<v<<"\n" <<"l = "<<l<<"\n";
+//  std::cout<<"r = "<<(P_line - P_nurbs).mag()<<"\n";
+//  std::cout<<"-----------"<<"\n";
+
+
   return (P_line - P_nurbs).mag(); // return distance between those two points
 }
 
-
-
-
-
-
-
 // #endif // GEANT4_USE_NLOPT
+
+
+
+
+
+
+
 
 
 // Overridden Base class functions ====================================================================
@@ -514,9 +819,9 @@ EInside G4GeorgeNurbs::Inside(const G4ThreeVector& p) const
   // finding the residual from p --> closest_surf_pt
   G4ThreeVector residual = closest_surf_pt - p;
 
-  if (residual.mag() < CONVERGENCE_TOLERANCE)
+  if (residual.mag() < SURFACE_TOLERANCE)
   {
-    // if the residual is of order of the CONVERGENCE_TOLERANCE, then p must be on the surface.
+    // if the residual is less than SURFACE_TOLERANCE, then p must be on the surface.
     return kSurface;
   }
 
@@ -572,7 +877,10 @@ G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p) const
 
 G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVector& v) const
 {
-  return 0.0;
+
+
+
+  return 0;
 }
 
 G4double G4GeorgeNurbs::DistanceToOut(const G4ThreeVector& p) const
@@ -598,6 +906,7 @@ G4double G4GeorgeNurbs::DistanceToOut( const G4ThreeVector& p,const G4ThreeVecto
                                         G4bool* validNorm,
                                         G4ThreeVector* n ) const
 {
+
   return 0.0;
 }
 
@@ -672,7 +981,42 @@ G4GeometryType G4GeorgeNurbs::GetEntityType() const
 }
 
 
+void G4GeorgeNurbs::SetBoundingLimits()
+{
+  // Safety check: empty control point grid
+  if (controlPts.empty() || controlPts[0].empty()) {
+    bminCached = G4ThreeVector(0.0, 0.0, 0.0);
+    bmaxCached = G4ThreeVector(0.0, 0.0, 0.0);
+    maxExtent = 0.0;
+    boundsCached = true;
+    return;
+  }
 
+  // Start from first control point
+  bminCached = controlPts[0][0];
+  bmaxCached = controlPts[0][0];
+
+
+  //iterate through control points to find the bounding box
+  for (const auto& row : controlPts) {
+    for (const auto& pt : row) {
+      if (pt.x() < bminCached.x()) bminCached.setX(pt.x());
+      if (pt.x() > bmaxCached.x()) bmaxCached.setX(pt.x());
+
+      if (pt.y() < bminCached.y()) bminCached.setY(pt.y());
+      if (pt.y() > bmaxCached.y()) bmaxCached.setY(pt.y());
+
+      if (pt.z() < bminCached.z()) bminCached.setZ(pt.z());
+      if (pt.z() > bmaxCached.z()) bmaxCached.setZ(pt.z());
+    }
+  }
+
+  maxExtent = (bmaxCached - bminCached).mag();
+  boundsCached = true;
+}
+
+std::vector<G4ThreeVector> G4GeorgeNurbs::GetBounds() const {return {bminCached, bmaxCached};}
+G4double G4GeorgeNurbs::GetMaxExtent() const {return maxExtent;};
 
 void G4GeorgeNurbs::ValidateKnotVectors() const
 {

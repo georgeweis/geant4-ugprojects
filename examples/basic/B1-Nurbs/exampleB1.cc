@@ -199,7 +199,7 @@ int main(int argc, char** argv)
 
 
 
-  if(true) // wrapped arc nurbs surface to separate from torus tests
+  if(false) // wrapped arc nurbs surface to separate from torus tests
   {
 
   G4double r = 1;
@@ -375,7 +375,7 @@ int main(int argc, char** argv)
 
 
   // tests of torus shape =======================================================================================
-  /*
+
   std::vector<std::vector<G4ThreeVector>> torusControlPts = georgeTorus::getTorusControlPts();
   std::vector<std::vector<G4double>> torusWeights = georgeTorus::getTorusWeights();
 
@@ -433,10 +433,24 @@ int main(int argc, char** argv)
   std::cout << end_section;
   // ✅✅ seems to work fine
 
+  //bounding limits checks
+  std::cout << start_section << "bounding limits checks" << start_section << "\n" << std::endl;
+  auto bounds = torusNurbs->GetBounds();
+  std::cout <<"bmin: " << bounds[0]<<std::endl;
+  std::cout <<"bmax: " << bounds[1]<<std::endl;
+  std::cout <<"maxExtent: " << torusNurbs->GetMaxExtent()<<std::endl;
+  std::cout << end_section;
 
 
+  //line intersection
+  std::cout << start_section << "line intersection" << start_section << "\n" << std::endl;
 
+  G4ThreeVector P0 = G4ThreeVector(10, 10, 124);
+  G4ThreeVector direction = G4ThreeVector(-5, 0, -1);
+  double line_length = 1000;
 
+  auto [uvl_opt, minimised_residual] = torusNurbs->LineIntersectionParams(P0, direction.unit(), line_length);
+  std::cout << end_section;
 
 
 
@@ -447,7 +461,6 @@ int main(int argc, char** argv)
 
 
   delete torusNurbs;
-  */
 
 
 
