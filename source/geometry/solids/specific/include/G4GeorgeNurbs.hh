@@ -32,12 +32,15 @@ class G4GeorgeNurbs : public G4VSolid
   G4bool boundsCached;
 
 
+  // for output on optimisation process on LineIntersection
+  bool optVerbose;
 
   // static variables
   static double LARGE_NUMBER;
   static G4ThreeVector LARGE_THREE_VECTOR;
   static double CONVERGENCE_TOLERANCE;
   static double SURFACE_TOLERANCE;
+
 
 
 
@@ -79,16 +82,16 @@ class G4GeorgeNurbs : public G4VSolid
   // iterates through the unique knots to find the closest knot to a given point.
   // Generally used as initial guess for optimisation techniques.
   // Returns a tuple of < [u,v] , R > where
-  // - [u,v] are the surface parameters of the closest knot
-  // - R is the distance to the closest knot
+  //   - [u,v] ->the surface parameters of the closest knot as a vector<double>
+  //   - R is -> distance to the closest knot as a double
 
 
   std::tuple<std::vector<double>, double> ClosestPointParams(const G4ThreeVector& point) const;
   // Finds the u and v parameters of the closest point on the NURBS surface to a given point by
   // minimising the magnitude (P_surface(u,v) - point(x,y,z)).
   // Returns a tuple of < [u,v], R> where:
-  // - [u,v] is a vector<double> of the optimised u,v surface parameters
-  // - R is a double representing separation between P_surface(u,v) and point(x,y,z) at optimal value
+  //   - [u,v] -> vector<double> of the optimised u,v surface parameters
+  //   - R -> double representing separation between P_surface(u,v) and point(x,y,z) at optimal value
 
   G4ThreeVector ClosestPoint(const G4ThreeVector& point) const;
   // Calls ClosestPointParams for u, v and returns the surface point as a position vector.
@@ -102,9 +105,9 @@ class G4GeorgeNurbs : public G4VSolid
                                                                    std::vector<double>& uvl_guess) const;
   // Finds optimal u,v (parametrising surface) and l (parametrising line) of the closest intersection of the line
   // passed though in the argument, and the Nurbs surface. Minimises ResidualLineDistance and returns a tuple of:
-  // - [u,v,l] - opimised values as vector of doubles
-  // - residual - minimised P_surface -> P_line distance as a double
-  // - successful_opt - check whether optimisation produced an error.
+  //   - [u,v,l] -> opimised values as vector of doubles
+  //   - residual -> minimised P_surface -> P_line distance as a double
+  //   - successful_opt -> check whether optimisation produced an error.
 
   void PrintIntersectionOutcome(std::string output_message, std::vector<double> uvl_guess,
                                 std::vector<double> uvl_opt, double residual,
@@ -112,34 +115,61 @@ class G4GeorgeNurbs : public G4VSolid
   // print statement for LineIntersectionOpt outcomes
 
   std::tuple<std::vector<double>,bool> CheckKnotBounds(std::vector<double>& uvl_opt, std::vector<double>& uvl_guess) const;
-  // if LineIntersectionOpt finds a minimum that is not an intersection, this fucniton is called to check whether
-  // it could be due to reaching the end of a knot vector. If the start/end of the u or v knot vector is reached, the
-  // initial guess is set to the value at the other end. Returns a tuple of:
-  // - new_uvl_guess - suggested new initial guess parameters as a vector of doubles
-  // - reached_knot_boundary - flag if condition met as a bool
+  // Checks output of optimised u, v values in line intersection procedures to check for convergence issues due to knot
+  // boundaries. Returns a tuple of:
+  //   - new_uvl_guess -> suggested new initial guess parameters as a vector of doubles
+  //   - reached_knot_boundary -> flag if condition met as a bool
 
   std::tuple<std::vector<double>, double> LineIntersectionParams(const G4ThreeVector& P0,
                                                                  const G4ThreeVector& direction,
-                                                                 double line_length) const;
-  // processes LineIntersectionOpt and applies logic for boundary cases. Returns a tuple of:
-  // - [uvl_opt] - validated optimised parameters as vector of doubles
-  // - R_opt - residual at optimisation as a double
+                                                                 double line_length,
+                                                                 int next_step_indiator) const;
+  // Processes LineIntersectionOpt for DistanceToIn or DistanceToIn calculation and applies logic for boundary cases.
+  // Optimsed for torus geometry. The argument next_step_indiator tells the function where to go once logic stream is
+  // finished. Input 0 for DistanceToIn calculation or 1 for DistanceToOut calculation.
+  // Returns a tuple of:
+  //   - [uvl_opt] -> validated optimised parameters as vector of doubles
+  //   - R_opt -> residual at optimisation as a double
 
-  std::tuple<std::vector<double>, double> PushLGuess(std::vector<double> uvl_opt_old,
+  std::tuple<std::vector<double>, double> PushLGuessForDTI(std::vector<double> uvl_opt_old,
                                                      double push_length,
                                                      const G4ThreeVector& P0,
                                                      const G4ThreeVector& direction,
                                                      double line_length) const;
-  std::tuple<std::vector<double>, double> FirstIntersectionTest(std::vector<double> uvl_opt_old,
+  // Helper function for LineIntersectionParams for DistanceToIn case. Increases the initial l guess used during
+  // optimisation until it finds another intersection. Deals with logic and returns (same as DistanceToInParams):
+  //   - [uvl_opt] -> validated optimised parameters as vector of doubles
+  //   - R_opt -> residual at optimisation as a double
+
+  std::tuple<std::vector<double>, double> FirstIntersectionTestForDTI(std::vector<double> uvl_opt_old,
                                                                 std::vector<double> uvl_opt_pushed,
                                                                 const G4ThreeVector& P0,
                                                                 const G4ThreeVector& direction,
                                                                 double line_length) const;
+  // Helper funciton called in PushLGuessForDTI when a new intersection is found at a new location. Checks if this
+  // is the first intersection in the lines path. Finds correct intersction if not. Returns (same as DistanceToInParams):
+  //   - [uvl_opt] -> validated optimised parameters as vector of doubles
+  //   - R_opt -> residual at optimisation as a double
 
-  G4ThreeVector LineIntersection(const G4ThreeVector& P0,
-                                 const G4ThreeVector& direction,
-                                 double line_length) const;
-  // finds the point of intersection between a line and a nurbs surface
+  std::tuple<std::vector<double>, double> PushLGuessForDTO(std::vector<double> uvl_opt_old,
+                                                     const G4ThreeVector& P0,
+                                                     const G4ThreeVector& direction,
+                                                     double line_length) const;
+  // Helper function for LineIntersectionParams for DistanceToOut case. Increases the initial l guess used during
+  // optimisation until it finds another intersection. Deals with logic and returns (same as DistanceToInParams):
+  //   - [uvl_opt] -> validated optimised parameters as vector of doubles
+  //   - R_opt -> residual at optimisation as a double
+
+
+  std::tuple<std::vector<double>, double> IntermediateIntersectionSearchForDTO(std::vector<double> uvl_opt_old,
+                                                                               std::vector<double> uvl_opt_pushed,
+                                                                               const G4ThreeVector& P0,
+                                                                               const G4ThreeVector& direction,
+                                                                               double line_length) const;
+  // Helper funciton called in PushLGuessForDTO to find a new intersection between the previous opimal values. Applies
+  // logic to choose where the valid intersection is. Returns (same as DistanceToInParams):
+  //   - [uvl_opt] -> validated optimised parameters as vector of doubles
+  //   - R_opt -> residual at optimisation as a double
 
 
 
@@ -242,6 +272,11 @@ class G4GeorgeNurbs : public G4VSolid
   void ValidateKnotVectors() const;
   // ensure that knot vectors have length nb_controlPts + degree + 1 in both directions
   // called in the constructor and throws an error if invalid
+
+  void EnableOptVerbose();
+  void DisableOptVerbose();
+
+
 
 
 

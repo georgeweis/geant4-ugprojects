@@ -319,15 +319,15 @@ int main(int argc, char** argv)
   }// ✅✅ same output as Python class
 
 
-  G4ThreeVector line_intersec = georgeNurbs->LineIntersection(p0, nline, lambda_max);
-
-
-  std::cout<<"p0 = "<<p0<<std::endl;
-  std::cout<<"nline = "<<nline<<std::endl;
-  std::cout<<"lambda_max = "<<lambda_max<<std::endl;
-
-  std::cout<<"line_intersec = "<<line_intersec<<std::endl;
-  std::cout<<end_section;
+//  G4ThreeVector line_intersec = georgeNurbs->LineIntersection(p0, nline, lambda_max);
+//
+//
+//  std::cout<<"p0 = "<<p0<<std::endl;
+//  std::cout<<"nline = "<<nline<<std::endl;
+//  std::cout<<"lambda_max = "<<lambda_max<<std::endl;
+//
+//  std::cout<<"line_intersec = "<<line_intersec<<std::endl;
+//  std::cout<<end_section;
 
   // ✅✅ same output as Python class --> Nurbs_Surface10_arc.py, TEST_NB = 5
 
@@ -445,12 +445,32 @@ int main(int argc, char** argv)
   //line intersection
   std::cout << start_section << "line intersection" << start_section << "\n" << std::endl;
 
-  G4ThreeVector P0 = G4ThreeVector(10, 10, 124);
-  G4ThreeVector direction = G4ThreeVector(-5, 0, -1);
-  double line_length = 1000;
+  std::cout << "With verbose" << start_section << "\n" << std::endl;
+  torusNurbs->EnableOptVerbose();
+  G4ThreeVector P0_verb = G4ThreeVector(20, -10, -200);
+  G4ThreeVector direction_verb = G4ThreeVector(1, -0.1, 1);
+  double line_length_verb = 1500;
 
-  auto [uvl_opt, minimised_residual] = torusNurbs->LineIntersectionParams(P0, direction.unit(), line_length);
+
+  auto [uvl_opt_verb, minimised_residual_verb] = torusNurbs->LineIntersectionParams(P0_verb, direction_verb.unit(), line_length_verb, 1);
+
+
+//  std::cout << "Without verbose" << start_section << "\n" << std::endl;
+//  torusNurbs->DisableOptVerbose();
+//  G4ThreeVector P0 = G4ThreeVector(10,0,250);
+//  G4ThreeVector direction = G4ThreeVector(0, 0, 1);
+//  double line_length = 1000;
+//
+//  auto [uvl_opt, minimised_residual] = torusNurbs->LineIntersectionParams(P0, direction.unit(), line_length, 1);
+
   std::cout << end_section;
+
+
+
+
+
+
+
 
 
 
