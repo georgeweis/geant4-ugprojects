@@ -8,6 +8,10 @@ project(B1)
 # Find Geant4 package, activating all available UI and Vis drivers by default
 # See the documentation for a guide on how to enable/disable specific components
 #
+
+set(NLopt_DIR "/opt/homebrew/Cellar/nlopt/2.10.0/lib/cmake/nlopt")
+find_package(NLopt REQUIRED)
+
 find_package(Geant4 REQUIRED ui_all vis_all)
 
 #----------------------------------------------------------------------------

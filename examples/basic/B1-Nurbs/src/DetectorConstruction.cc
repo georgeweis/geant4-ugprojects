@@ -39,6 +39,7 @@
 #include "G4SystemOfUnits.hh"
 #include "G4Trd.hh"
 #include "G4GeorgeSolid.hh"
+#include "G4GeorgeNurbs.hh"
 
 namespace B1
 {

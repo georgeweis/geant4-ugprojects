@@ -1,4 +1,25 @@
 //
+// The code below is the exact main that i used to perform all the nurbs surface
+// tests once the solid was fully implemented. Ive saved it here in case i need
+// to revisit any of these tests.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ********************************************************************
 // * License and Disclaimer                                           *
 // *                                                                  *
