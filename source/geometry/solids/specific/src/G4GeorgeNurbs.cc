@@ -406,7 +406,7 @@ std::tuple<std::vector<double>, double, bool> G4GeorgeNurbs::LineIntersectionOpt
                                                                                 std::vector<double>& uvl_guess) const
 {
   // set up optimiser
-  nlopt::opt opt(nlopt::LN_COBYLA, 3);
+  nlopt::opt opt(nlopt::LN_BOBYQA, 3);
   opt.set_xtol_rel(CONVERGENCE_TOLERANCE);
 
   // Set bounds for (u, v, l)
@@ -551,6 +551,8 @@ std::tuple<std::vector<double>, double> G4GeorgeNurbs::LineIntersectionParams(co
   std::vector<double> uvl_guess = {closest_knot_start_point[0], closest_knot_start_point[1] , initial_l_guess};
   double line_length_upper_lim = R_knot;
   std::tie(uvl_opt, residual_opt, opt_success) = LineIntersectionOpt(P0, direction, line_length_upper_lim, uvl_guess);
+
+  // std::cout<<"======================== opt success poutcome: "<<opt_success<<std::endl;
 
 
   /* Check 1: is this a intersection point (residual = 0)? */
@@ -995,7 +997,7 @@ std::tuple<std::vector<double>, double> G4GeorgeNurbs::IntermediateIntersectionS
 
 // Static functions  used in optimisation =============================================================
 
-// #ifdef GEANT4_USE_NLOPT //
+
 double G4GeorgeNurbs::ResidualToSurfacePoint(const std::vector<double>& uv, std::vector<double>& grad, void* data)
 {
   // definition of static function used by NLopt to compute the distance (residual)
@@ -1034,6 +1036,7 @@ double G4GeorgeNurbs::ResidualLineDistance(const std::vector<double>& uvl,
 
 
 
+
   G4ThreeVector P_nurbs = context->nurbs->SurfacePoint(u, v);
   G4ThreeVector P_line = context->P0 + l * context->direction;
 
@@ -1049,7 +1052,7 @@ double G4GeorgeNurbs::ResidualLineDistance(const std::vector<double>& uvl,
   return (P_line - P_nurbs).mag(); // return distance between those two points
 }
 
-// #endif // GEANT4_USE_NLOPT
+
 
 
 
@@ -1063,6 +1066,7 @@ double G4GeorgeNurbs::ResidualLineDistance(const std::vector<double>& uvl,
 
 EInside G4GeorgeNurbs::Inside(const G4ThreeVector& p) const
 {
+
   // finding the closest surface point to p
   auto [uv_closest_pt, R_closest_pt] = ClosestPointParams(p); // u,v of closest point (can maybe just use ClosestKnot)
   G4ThreeVector closest_surf_pt = SurfacePoint(uv_closest_pt[0], uv_closest_pt[1]); // [x,y,z] of closest pt
@@ -1073,6 +1077,7 @@ EInside G4GeorgeNurbs::Inside(const G4ThreeVector& p) const
 
   if (residual.mag() < SURFACE_TOLERANCE)
   {
+    // G4cout<<" Inside: "<<p<< " kSurface "<<G4endl;
     // if the residual is less than SURFACE_TOLERANCE, then p must be on the surface.
     return kSurface;
   }
@@ -1082,7 +1087,11 @@ EInside G4GeorgeNurbs::Inside(const G4ThreeVector& p) const
   G4double residual_dot_normal = residual.dot(normal_at_surf_pt);
 
   // inside/outside can be determined from the sign of the dot product
-  if (residual_dot_normal>0){return kInside;}
+  if (residual_dot_normal>0){
+    // G4cout<<" Inside: "<<p<< " kInside "<<G4endl;
+    return kInside;
+  }
+  // G4cout<<" Inside: "<<p<< " kOutside "<<G4endl;
   return kOutside;
 }
 
@@ -1093,6 +1102,8 @@ G4ThreeVector G4GeorgeNurbs::SurfaceNormal(const G4ThreeVector& p) const
   // residual_from_p should be 0.
   auto [uv_from_p, residual_from_p] = ClosestPointParams(p);
   G4ThreeVector n = SurfaceNormal(uv_from_p[0], uv_from_p[1]);
+
+  // G4cout<<" SurfaceNormal: "<<n<<G4endl;
   return n;
 }
 
@@ -1100,6 +1111,7 @@ G4ThreeVector G4GeorgeNurbs::SurfaceNormal(const G4ThreeVector& p) const
 
 G4ThreeVector G4GeorgeNurbs::SurfaceNormal(const double u, const double v) const
 {
+  // overloaded surface mornal function taking parameters u and v
   std::vector<G4ThreeVector> tangents = SurfaceDerivatives(u,v);
 
   G4ThreeVector& tangent_u = tangents[0];
@@ -1114,7 +1126,12 @@ G4ThreeVector G4GeorgeNurbs::SurfaceNormal(const double u, const double v) const
 
 G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p) const
 {
-  // first check if point is already inside or on surface, return 0 if so
+  //G4cout<<" DistanceToIn(p): "<<p<<" (Default 10)"<<G4endl;
+  //return 10;
+
+
+
+  // first check if point is already inside, return 0 if so
   EInside inside_status = Inside(p);
   if (inside_status == kInside ) {
     return 0;
@@ -1135,16 +1152,23 @@ G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVecto
   }
 
   auto [uvl_opt, minimised_residual] = LineIntersectionParams(p0,v,LARGE_NUMBER, 0);
+
+  //G4cout<<" DistanceToIn(p,v) "<<p0<< " " <<v<<" "<< uvl_opt[2]<<G4endl;
   return uvl_opt[2];
 }
 
 G4double G4GeorgeNurbs::DistanceToOut(const G4ThreeVector& p) const
 {
+  //G4cout<<" DistanceToOut(p) "<<p<<" (Default 10)"<<G4endl;
+  //return 10;
+
+
   // first check if point is already outside, return 0 if so
-//  EInside inside_status = Inside(p);
-//  if (inside_status == kOutside) {
-//    return 0;
-//  }
+
+  EInside inside_status = Inside(p);
+  if (inside_status == kOutside) {
+    return 0;
+  }
 
   // find the closest point on the surface using ClosestPointParams function
   auto [uv, residual_from_p] = ClosestPointParams(p);
@@ -1159,30 +1183,38 @@ G4double G4GeorgeNurbs::DistanceToOut( const G4ThreeVector& p,const G4ThreeVecto
                                         G4bool* validNorm,
                                         G4ThreeVector* n ) const
 {
+
+
   // check its not already outside
-//  EInside inside_status = Inside(p);
-//  if (inside_status == kOutside) {
-//    return 0;
-//  }
+  EInside inside_status = Inside(p);
+  if (inside_status == kOutside) {
+    return 0;
+  }
 
   // find intersection of surface point (params u,v) and the line (param l)
   auto [uvl_opt, residual_opt] = LineIntersectionParams(p, v.unit(), maxExtent*2, 1);
+  //G4cout<<" DistanceToOut(p,v) "<<p<< " " <<v<< " "<< uvl_opt[2]<<G4endl;
+
+
+  /* Implementing this optional part completely breaks the programme for some reason, even though the method is velid*/
 
   // Handle normal computation
-  if (calcNorm && n && validNorm) {
-    G4ThreeVector normal = SurfaceNormal(uvl_opt[0], uvl_opt[1]);
-
-    if (normal.mag2() > 0) {  // Validate it's not a zero vector
-      *n = normal.unit();
-      *validNorm = true;
-    } else {
-      *validNorm = false;
-    }
-
-    return uvl_opt[2]; // optimised l parameter
-  }
-
-
+  //  if (calcNorm && n && validNorm) {
+  //
+  //
+  //    G4ThreeVector normal = SurfaceNormal(uvl_opt[0], uvl_opt[1]);
+  //
+  //
+  //
+  //    if (normal.mag2() > 0) {  // Validate it's not a zero vector
+  //      *n = normal.unit();
+  //      *validNorm = true;
+  //    } else {
+  //      *validNorm = false;
+  //    }
+  //    G4cout<<" (Norm requested in DistanceToOut(p,v), norm: "<<*n<<",  validNorm: "<<*validNorm<< G4endl;
+  //
+  //  }
 
 
   return uvl_opt[2];
@@ -1200,13 +1232,19 @@ G4double G4GeorgeNurbs::GetSurfaceArea()
 
 G4ThreeVector G4GeorgeNurbs::GetPointOnSurface() const
 {
+
   G4double rand_u = G4UniformRand();
   G4double rand_v = G4UniformRand();
-  return SurfacePoint(rand_u, rand_v);
+  G4ThreeVector surf_point = SurfacePoint(rand_u, rand_v);
+  //G4cout<<" GetPointOnSurface(): p("<<rand_u<< ", " <<rand_v<< ") = "<< surf_point<<G4endl;
+
+  return surf_point;
 }
 
 G4VisExtent G4GeorgeNurbs::GetExtent() const
 {
+  //G4cout<<" GetExtent() ( bminCached: "<<bminCached<< " , " <<bmaxCached<< " )"<<G4endl;
+
   return G4VisExtent(
     bminCached.x(), bmaxCached.x(),
     bminCached.y(), bmaxCached.y(),
@@ -1226,8 +1264,9 @@ G4bool G4GeorgeNurbs::CalculateExtent( const EAxis pAxis,
   bmin = bminCached;
   bmax = bmaxCached;
 
-//  // Get bounding box
-//  BoundingLimits(bmin,bmax);
+  // Get bounding box
+  //BoundingLimits(bmin,bmax);
+
 
   // Find extent
   G4BoundingEnvelope bbox(bmin,bmax);
