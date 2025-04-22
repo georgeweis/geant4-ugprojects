@@ -172,7 +172,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   G4NistManager* nist = G4NistManager::Instance();
 
   // Envelope parameters
-  G4double env_sizeY = 40 * cm, env_sizeXZ = 40 * cm;
+  G4double env_sizeX = 40 * cm, env_sizeY = 20 * cm, env_sizeZ = 40 * cm;
 
   G4Material* env_mat = nist->FindOrBuildMaterial("G4_WATER");
   // World material
@@ -190,7 +190,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
   // envelope
   auto solidEnv = new G4Box("Envelope",  // its name
-                            env_sizeXZ, env_sizeY, env_sizeXZ);  // its size
+                            env_sizeX, env_sizeY, env_sizeZ);  // its size
 
   auto logicEnv = new G4LogicalVolume(solidEnv,  // its solid
                                     env_mat,  // its material

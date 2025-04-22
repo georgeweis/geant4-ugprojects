@@ -50,6 +50,7 @@ class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
     PrimaryGeneratorAction();
     ~PrimaryGeneratorAction() override;
 
+
     // method from the base class
     void GeneratePrimaries(G4Event*) override;
 
@@ -59,6 +60,7 @@ class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
   private:
     G4ParticleGun* fParticleGun = nullptr;  // pointer a to G4 gun class
     G4Box* fEnvelopeBox = nullptr;
+    int counter = 0;
 };
 
 }  // namespace B1
