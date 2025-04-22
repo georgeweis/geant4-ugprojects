@@ -24,7 +24,8 @@ file(GLOB headers ${PROJECT_SOURCE_DIR}/include/*.hh)
 #----------------------------------------------------------------------------
 # Add the executable, use our local headers, and link it to the Geant4 libraries
 #
-add_executable(exampleB1 exampleB1.cc ${sources} ${headers})
+add_executable(exampleB1 exampleTorusTests.cc ${sources} ${headers})
+#add_executable(exampleB1 exampleB1.cc ${sources} ${headers})
 target_include_directories(exampleB1 PRIVATE include)
 target_link_libraries(exampleB1 PRIVATE ${Geant4_LIBRARIES})
 

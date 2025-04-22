@@ -72,7 +72,7 @@
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-namespace georgeTorus{
+namespace georgeTorusTests{
 std::vector<std::vector<G4ThreeVector>> getTorusControlPts()
 {
 
@@ -397,8 +397,8 @@ int main(int argc, char** argv)
 
   // tests of torus shape =======================================================================================
 
-  std::vector<std::vector<G4ThreeVector>> torusControlPts = georgeTorus::getTorusControlPts();
-  std::vector<std::vector<G4double>> torusWeights = georgeTorus::getTorusWeights();
+  std::vector<std::vector<G4ThreeVector>> torusControlPts = georgeTorusTests::getTorusControlPts();
+  std::vector<std::vector<G4double>> torusWeights = georgeTorusTests::getTorusWeights();
 
   std::vector<G4double> torusKnotsU = {0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1};
   std::vector<G4double> torusKnotsV = {0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1};
@@ -463,18 +463,6 @@ int main(int argc, char** argv)
   std::cout << end_section;
 
 
-  //line intersection
-  std::cout << start_section << "line intersection" << start_section << "\n" << std::endl;
-
-  std::cout << "With verbose" << start_section << "\n" << std::endl;
-  torusNurbs->EnableOptVerbose();
-  G4ThreeVector P0_verb = G4ThreeVector(20, -10, -200);
-  G4ThreeVector direction_verb = G4ThreeVector(1, -0.1, 1);
-  double line_length_verb = 1500;
-
-
-  auto [uvl_opt_verb, minimised_residual_verb] = torusNurbs->LineIntersectionParams(P0_verb, direction_verb.unit(), line_length_verb, 1);
-
 
 //  std::cout << "Without verbose" << start_section << "\n" << std::endl;
 //  torusNurbs->DisableOptVerbose();
@@ -488,8 +476,169 @@ int main(int argc, char** argv)
 
 
 
+  //final test of important functions
+  std::cout << start_section << "final test of important functions" << start_section << "\n" << std::endl;
+  /* After getting it to show up in the gui with errors, need to do a test of
+    - Inside(p)
+    - DistanceToIn(p)
+    - DistanceToOut(p)
+    - DistanceToIn(p,v)
+    - DistanceToOut(p,v)
+  */
+
+  // problem:
+  // Track stuck, not moving for 25 steps.
+  //  Current  phys volume: 'World'
+  //   - at position : (0,0,125.0012635833764)
+  //     in direction: (0,0,1)
+  //    (local position: (0,0,125.0012635833764))
+  //    (local direction: (0,0,1)).
+
+  torusNurbs->EnableOptVerbose();
 
 
+
+  //Test 1
+  std::cout<<start_section<<"Test 1"<<start_section<<std::endl;
+
+  // will just rewite these
+  G4ThreeVector P0_test;
+  G4ThreeVector direction_test;
+
+
+
+  // 1) origin inside?
+  P0_test = G4ThreeVector(0,0,0);
+  std::cout<<"Check 1"<<start_section<<start_section <<"\n"
+           <<"p = "<<P0_test<<"\n"
+           <<"Inside(p): "<<torusNurbs->Inside(P0_test)<<"\n"
+           <<start_section<<std::endl;
+
+  // 2) distance to out from intersection point
+  P0_test = G4ThreeVector(0,0,125.0012635833764);
+  direction_test = G4ThreeVector(0,0,1);
+  G4double DTO_1 = torusNurbs->DistanceToOut(P0_test, direction_test.unit());
+
+  std::cout<<"Check 2"<<start_section <<start_section<<"\n"
+           <<"p = "<<P0_test<<"\n"
+           <<"v = "<<direction_test<<"\n"
+           <<"DistanceToOut(p,v): "<<DTO_1<<"\n"
+           <<start_section<<std::endl;
+
+  std::cout<<start_section<<"\n"<<std::endl;
+
+
+  //Test 2
+  std::cout<<start_section<<"Test 2"<<start_section<<std::endl;
+  P0_test = G4ThreeVector(0,0,-400);
+  direction_test = G4ThreeVector(0,0,1);
+
+  //check 1 Inside
+  P0_test = G4ThreeVector(0,0,0);
+  std::cout<<"Check 1"<<start_section<<start_section <<"\n"
+           <<"p = "<<P0_test<<"\n"
+           <<"Inside(p): "<<torusNurbs->Inside(P0_test)<<"\n"
+           <<start_section<<std::endl;
+
+
+  // check 2 distance to in
+  P0_test = G4ThreeVector(0,0,-400);
+  G4double DTI_1 = torusNurbs->DistanceToIn(P0_test, direction_test.unit());
+
+  std::cout<<"Check 2"<<start_section <<start_section<<"\n"
+           <<"p = "<<P0_test<<"\n"
+           <<"v = "<<direction_test<<"\n"
+           <<"DistanceToIn(p,v): "<<DTO_1<<"\n"
+           <<start_section<<std::endl;
+
+
+  // check 3 closest knot
+  P0_test = G4ThreeVector(0,0,-400);
+  std::cout<<"Check 3 - closest knot"<<start_section <<start_section<<"\n";
+  auto [closest_knot, R_knot] = torusNurbs->ClosestKnot(P0_test);
+
+  std::cout<<"closest_knot = "<<"("<<closest_knot[0] <<","<<closest_knot[1]<<")"<<"\n"
+           <<"R_knot = "<<R_knot<<"\n"
+           <<start_section<<std::endl;
+
+  std::cout<<start_section<<"\n"<<std::endl;
+
+  std::cout << end_section;
+
+
+
+
+
+  //line intersection
+ std::cout << start_section << "line intersection" << start_section << "\n" << std::endl;
+
+  std::cout << "With verbose" << start_section << "\n" << std::endl;
+  torusNurbs->EnableOptVerbose();
+  G4ThreeVector P0_verb = G4ThreeVector(20,20,-300);
+  G4ThreeVector direction_verb = G4ThreeVector(0,-1, 1);
+  double line_length_verb = 1500;
+
+
+  auto [uvl_opt_verb, minimised_residual_verb] = torusNurbs->LineIntersectionParams(P0_verb, direction_verb.unit(), line_length_verb, 1);
+
+
+  // linking intersection tests
+
+//  torusNurbs->DisableOptVerbose();
+  if(false)
+  {
+  std::cout << start_section << "// linking intersection tests" << start_section << "\n" << std::endl;
+
+  std::vector<G4ThreeVector> linked_intersections;
+
+  // P0_cont1 is below torus
+  G4ThreeVector P0_cont1 = G4ThreeVector(0,0,-400);
+  G4ThreeVector direction_cont = G4ThreeVector(0,0, 1);
+  direction_cont = direction_cont.unit();
+  linked_intersections.push_back(P0_cont1);
+
+
+  G4double distance_cont1 = torusNurbs->DistanceToIn(P0_cont1, direction_cont.unit());
+  std::cout<<start_section<<"\n distance_cont1: "<<distance_cont1<<"\n"<<std::endl; //works
+
+
+
+  //P0_cont2 is bottom of torus
+  G4ThreeVector P0_cont2 = P0_cont1 + distance_cont1*direction_cont;
+  linked_intersections.push_back(P0_cont2);
+
+  G4double distance_cont2 = torusNurbs->DistanceToOut(P0_cont2, direction_cont.unit());
+  std::cout<<start_section<<"\n distance_cont2: "<<distance_cont2<<"\n"<<std::endl;
+//
+//
+  // P0_cont3 is bottom of inner loop
+  G4ThreeVector P0_cont3 = P0_cont2 + distance_cont2*direction_cont;
+  linked_intersections.push_back(P0_cont3);
+
+  G4double distance_cont3 = torusNurbs->DistanceToIn(P0_cont3, direction_cont.unit());
+  std::cout<<start_section<<"\n distance_cont3: "<<distance_cont3<<"\n"<<std::endl;
+
+
+  // P0_cont4 is top of innter radius
+  G4ThreeVector P0_cont4 = P0_cont3 + distance_cont3*direction_cont;
+  linked_intersections.push_back(P0_cont4);
+
+  G4double distance_cont4 = torusNurbs->DistanceToOut(P0_cont4, direction_cont.unit());
+  std::cout<<start_section<<"\n distance_cont4: "<<distance_cont3<<"\n"<<std::endl;
+
+  // P0_cont5 is at top of outer radius
+  G4ThreeVector P0_cont5 = P0_cont4 + distance_cont4*direction_cont;
+  linked_intersections.push_back(P0_cont5);
+
+  G4double distance_cont5 = torusNurbs->DistanceToIn(P0_cont5, direction_cont.unit()); // should be large number
+
+
+  std::cout<<"linked_intersection = np.array([";
+  for(int i = 0; i < linked_intersections.size(); ++i) {
+    std::cout<<"["<<linked_intersections[i].x()<<", "<<linked_intersections[i].y()<<", "<<linked_intersections[i].z()<<"],";
+  }
+  std::cout<<" ])"<<std::endl;
+  }
 
 
 
