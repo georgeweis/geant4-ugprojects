@@ -284,36 +284,52 @@ std::tuple<std::vector<double>, double> G4GeorgeNurbs::ClosestKnot(const G4Three
   std::unique_copy(knotVectorU.begin(), knotVectorU.end(), std::back_inserter(unique_u_knots));
   std::unique_copy(knotVectorV.begin(), knotVectorV.end(), std::back_inserter(unique_v_knots));
 
+  /*attempt to use more sample points to stop optimiser failure issues*/
+  auto linspace = [](double start, double end, int num) -> std::vector<double> { // lambda funciton to make a quick linspace
+        std::vector<double> result;
+        if (num == 0) return result;
+        if (num == 1) {
+            result.push_back(start);
+            return result;
+        }
+
+        double step = (end - start) / (num - 1);
+        for (int i = 0; i < num; ++i) {
+            result.push_back(start + i * step);
+        }
+        return result;
+    };
+
+  // create twice as many sample points
+  auto sample_u_knots = linspace(knotVectorU.front(), knotVectorU.back(), unique_u_knots.size()*4);
+  auto sample_v_knots = linspace(knotVectorV.front(), knotVectorV.back(), unique_u_knots.size()*4);
+
+  // in case of floating point error propogation
+  sample_u_knots.back() = unique_u_knots.back();
+  sample_v_knots.back() = unique_v_knots.back();
+
   double separation;
-  for (size_t i = 0; i < unique_u_knots.size(); ++i)
+  for (size_t i = 0; i < sample_u_knots.size(); ++i)
   {
-    for (size_t j = 0; j < unique_v_knots.size(); ++j)
+    for (size_t j = 0; j < sample_v_knots.size(); ++j)
     {
       // cycles through each unique knot combination and calculates the distance
       // between that surface point and the given point
-      G4ThreeVector P_s_knot = SurfacePoint(unique_u_knots[i], unique_v_knots[j]);
+      G4ThreeVector P_s_knot = SurfacePoint(sample_u_knots[i], sample_v_knots[j]);
       G4ThreeVector residual_vec = P_s_knot - point;
       separation = residual_vec.mag();
 
       // Debugging output
-      // G4cout<<"--------------"<<G4endl;
-      // G4cout<<"knot: ("<<unique_u_knots[i]<<", "<<unique_v_knots[j]<<"),  r = ("<<separation<<")\n";
-      // G4cout<<P_s_knot<<G4endl;
-
+      // G4cout<<"--------------"<<G4endl;      // G4cout<<"knot: ("<<unique_u_knots[i]<<", "<<unique_v_knots[j]<<"),  r = ("<<separation<<")\n";      // G4cout<<P_s_knot<<G4endl;
 
       if (separation < smallest_R)
       {
         //G4cout<<"<----------entered if statment"<<G4endl;
 
         // updates u_v_smallest_R if separation with these parameters is smaller than the current smallest_R
-
         smallest_R = separation;
-        u_v_smallest_R[0] = unique_u_knots[i];
-        u_v_smallest_R[1] = unique_v_knots[j];
-
-
-
-
+        u_v_smallest_R[0] = sample_u_knots[i];
+        u_v_smallest_R[1] = sample_v_knots[j];
       }
     }
   }
@@ -323,31 +339,34 @@ std::tuple<std::vector<double>, double> G4GeorgeNurbs::ClosestKnot(const G4Three
   // Saves convergence issues due to knot vector boundaries when ClosestKnot is used as a start guess.
   double residual_near_front;
   double residual_near_back;
-  if( u_v_smallest_R[0] == unique_u_knots.front() || u_v_smallest_R[0] == unique_u_knots.back())
+  if( u_v_smallest_R[0] == sample_u_knots.front() || u_v_smallest_R[0] == sample_u_knots.back())
   {
     // if u is at the end of the knot vector, compare residuals of the knots that are 1 knot away
     int size_u = unique_u_knots.size();
-    residual_near_front = (point - SurfacePoint(unique_u_knots[1], u_v_smallest_R[1])).mag();
-    residual_near_back = (point - SurfacePoint(unique_u_knots[size_u-2], u_v_smallest_R[1])).mag();
+    residual_near_front = (point - SurfacePoint(sample_u_knots[1], u_v_smallest_R[1])).mag();
+    residual_near_back = (point - SurfacePoint(sample_u_knots[size_u-2], u_v_smallest_R[1])).mag();
 
      u_v_smallest_R[0] = (residual_near_front < residual_near_back) // if residual near front of u is closer
-                      ? unique_u_knots.front() // return the first knot (usually 0)
-                      : unique_u_knots.back(); // else return the last knot (usually 1)
+                      ? sample_u_knots.front() // return the first knot (usually 0)
+                      : sample_u_knots.back(); // else return the last knot (usually 1)
   }
 
-  if( u_v_smallest_R[1] == unique_v_knots.front() || u_v_smallest_R[1] == unique_v_knots.back())
+  if( u_v_smallest_R[1] == sample_v_knots.front() || u_v_smallest_R[1] == sample_v_knots.back())
   {
     // if v is at the end of the knot vector, compare residuals of the knots that are 1 knot away
-    int size_v = unique_v_knots.size();
+    int size_v = sample_v_knots.size();
     residual_near_front = (point - SurfacePoint(u_v_smallest_R[0], unique_v_knots[1])).mag();
     residual_near_back = (point - SurfacePoint(u_v_smallest_R[0], unique_v_knots[size_v-2])).mag();
+    //std::cout<<"BEFORE u_v_smallest_R: ("<<u_v_smallest_R[0] << " "<<u_v_smallest_R[1]<<")"<<std::endl;
+    //std::cout<<"residual_near_front: " << residual_near_front << std::endl;    //std::cout<<"residual_near_back: " << residual_near_back << std::endl;
 
     u_v_smallest_R[1] = (residual_near_front < residual_near_back) // if residual near front of v is closer
-                      ? unique_v_knots.front() // return the first knot (usually 0)
-                      : unique_v_knots.back(); // else return the last knot (usually 1)
+                      ? sample_v_knots.front() // return the first knot (usually 0)
+                      : sample_v_knots.back(); // else return the last knot (usually 1)
+    //std::cout<<"AFTER u_v_smallest_R: ("<<u_v_smallest_R[0] << " "<<u_v_smallest_R[1]<<")"<<std::endl;
   }
 
-  // G4cout<<"closest knot from indide closest knot function: ("<<u_v_smallest_R[0]<<", "<<u_v_smallest_R[1]<<"),  r = ("<<smallest_R<<")\n";
+  //G4cout<<"closest knot from indide closest knot function: ("<<u_v_smallest_R[0]<<", "<<u_v_smallest_R[1]<<"),  r = ("<<smallest_R<<")\n";
   return std::make_tuple(u_v_smallest_R, smallest_R);
 }
 
