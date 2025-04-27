@@ -744,7 +744,7 @@ G4ThreeVector G4GeorgeNurbs::SurfaceNormal(const double u, const double v) const
 G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p) const
 {
   //G4cout<<" DistanceToIn(p): "<<p<<" (Default 10)"<<G4endl;
-  //return 10;
+  return 10;
 
 
 
@@ -763,7 +763,6 @@ G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p) const
 
 G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVector& v) const
 {
-  std::cout<<"DistanceToIn("<<p0<<","<<v<<") called"<<std::endl;
 
   // check if inside bounding box
   bool started_outside_bbox = false;
@@ -773,10 +772,10 @@ G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVecto
 
     l_intersect_bbox = boundingBox.DistanceToIn(p0, v);
     started_outside_bbox = true;
-    std::cout<<"p0 not inside bounding_box. l_intersect_bbox: "<<l_intersect_bbox<<std::endl;
+//    std::cout<<"p0 not inside bounding_box. l_intersect_bbox: "<<l_intersect_bbox<<std::endl;
     if(l_intersect_bbox>LARGE_NUMBER)
     {
-      std::cout<<"no intersection with bbox, returning large number. "<<std::endl;
+//      std::cout<<"no intersection with bbox, returning large number. "<<std::endl;
       // p0 is not in bounding box and doesnt intersect the bounding box
       return LARGE_NUMBER;
     }
@@ -785,7 +784,7 @@ G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVecto
   // check if inside the volume
   EInside inside_status = Inside(p0);
   if (inside_status == kInside) {
-    std::cout<<"p0 inside volume. returning 0 "<<std::endl;
+//    std::cout<<"p0 inside volume. returning 0 "<<std::endl;
     return 0;
   }
 
@@ -800,14 +799,14 @@ G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVecto
   // check results of initial optimisation
   G4ThreeVector normal_at_uv_opt = SurfaceNormal(uvl_opt[0], uvl_opt[1]);
 
-  std::cout<<"First intersection before ifs   "
-             <<"minimised_residual: "<< minimised_residual<<" l_opt: "<<uvl_opt[2]<<" n_s.v: "<<normal_at_uv_opt.dot(v)<<std::endl;
+//  std::cout<<"First intersection before ifs   "
+//             <<"minimised_residual: "<< minimised_residual<<" l_opt: "<<uvl_opt[2]<<" n_s.v: "<<normal_at_uv_opt.dot(v)<<std::endl;
 
   if (minimised_residual<SURFACE_TOLERANCE  // intersection found
    && uvl_opt[2]>SURFACE_TOLERANCE // intersection not at start point
    && normal_at_uv_opt.dot(v) < 0) // line is entering the volume at the intersection
   {
-    std::cout<<"First intersection accetped. "<<std::endl;
+//    std::cout<<"First intersection accetped. "<<std::endl;
     double l_intersection = uvl_opt[2];
     if (started_outside_bbox){l_intersection += l_intersect_bbox;} // add distance to the bounding box back on to l
     return l_intersection;
@@ -817,15 +816,15 @@ G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVecto
   double l_intersection_discrete = DiscreteLineSearchToIn(p0_start, v);
 
   if (started_outside_bbox){l_intersection_discrete += l_intersect_bbox;} // add distance to the bounding box back on to l
-  return l_intersection_discrete;
+  return l_intersection_discrete ;
 }
 
 double G4GeorgeNurbs::DiscreteLineSearchToIn(const G4ThreeVector& P0_start,
                                              const G4ThreeVector& direction) const
 {
   // determining step size
-  double l_max = boundingBox.DistanceToOut(P0_start);
-  int max_nb_steps = 10;
+  double l_max = boundingBox.DistanceToOut(P0_start, direction);
+  int max_nb_steps = 20;
   double step_size = l_max/max_nb_steps;
 
   // declaring variables for optimisation process
@@ -843,10 +842,14 @@ double G4GeorgeNurbs::DiscreteLineSearchToIn(const G4ThreeVector& P0_start,
     p_current = p_previous + step_size*direction;
     nb_steps_taken++;
 
+//    std::cout<<"Inside(p_current) "<<p_current<<" " <<Inside(p_current)<<std::endl;
+
     if (Inside(p_current) == kInside)
     {
       // must have crossed the surface to enter the volume. Attempt optimisation with new p0
       std::tie(uvl_opt, residual_opt) = LineIntersectionParams(p_previous,direction,step_size);
+
+//      PrintIntersectionOutcome("\n ====outcome of interseection", std::vector<double>{0,0,0}, uvl_opt, residual_opt, p_previous, direction);
       intersection_found = true;
       break;
     }
@@ -879,7 +882,7 @@ double G4GeorgeNurbs::DiscreteLineSearchToIn(const G4ThreeVector& P0_start,
 G4double G4GeorgeNurbs::DistanceToOut(const G4ThreeVector& p) const
 {
   //G4cout<<" DistanceToOut(p) "<<p<<" (Default 10)"<<G4endl;
-  //return 10;
+  return 30;
 
 
   // first check if point is already outside, return 0 if so
@@ -901,7 +904,10 @@ G4double G4GeorgeNurbs::DistanceToOut( const G4ThreeVector& p,const G4ThreeVecto
                                         G4bool* validNorm,
                                         G4ThreeVector* n ) const
 {
-
+  // not used since it messes up Geant4 logic for some reason. Supress warnings on build
+  (void)calcNorm;
+  (void)validNorm;
+  (void)n;
 
   // check if start point is already outside
   EInside inside_status = Inside(p);
@@ -922,22 +928,22 @@ G4double G4GeorgeNurbs::DistanceToOut( const G4ThreeVector& p,const G4ThreeVecto
    && uvl_opt[2]>2*SURFACE_TOLERANCE // intersection not at start point
    && normal_at_uv_opt.dot(v) > 0) // line is leaving the volume at the intersection
   {
-    return uvl_opt[2];
+    return uvl_opt[2] + SURFACE_TOLERANCE;
   }
 
 
   // if reached here, the correct intersection was not found on first attempt, use pointwise search
   double l_intersection_discrete = DiscreteLineSearchToOut(p, v);
 
-  return l_intersection_discrete;
+  return l_intersection_discrete + SURFACE_TOLERANCE;
 }
 
 double G4GeorgeNurbs::DiscreteLineSearchToOut(const G4ThreeVector& P0_start,
                                              const G4ThreeVector& direction) const
 {
   // determining step size
-  double l_max = boundingBox.DistanceToOut(P0_start);
-  int max_nb_steps = 10;
+  double l_max = boundingBox.DistanceToOut(P0_start, direction);
+  int max_nb_steps = 30;
   double step_size = l_max/max_nb_steps;
 
   // declaring variables for optimisation process
@@ -981,6 +987,7 @@ double G4GeorgeNurbs::DiscreteLineSearchToOut(const G4ThreeVector& P0_start,
     G4ThreeVector p_surface_closest = SurfacePoint(uv_from_p[0], uv_from_p[1]);
     double l_estimate = (p_previous - p_surface_closest).dot(surface_norm)/direction.dot(surface_norm);
     return (nb_steps_taken-1)*step_size + l_estimate;
+//    return 500;
   }
 }
 
@@ -1130,8 +1137,8 @@ void G4GeorgeNurbs::DisableOptVerbose(){optVerbose = false;}
 void G4GeorgeNurbs::InitialiseBoundingBox()
 {
   // Calculate center and half-sizes
-  G4ThreeVector center = 0.5 * (bminCached + bmaxCached);
-  G4ThreeVector halfSize = 0.5 * (bmaxCached - bminCached);
+  G4ThreeVector center = 0.55 * (bminCached + bmaxCached); // slightly larger than actual box to avoid convergence issues
+  G4ThreeVector halfSize = 0.55 * (bmaxCached - bminCached);
 
   // Set the bounding box dimensions
   boundingBox.SetXHalfLength(halfSize.x());

@@ -52,7 +52,7 @@ PrimaryGeneratorAction::PrimaryGeneratorAction()
   G4String particleName;
   G4ParticleDefinition* particle = particleTable->FindParticle(particleName = "geantino");
   fParticleGun->SetParticleDefinition(particle);
-  fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0., 0., 1.));
+  fParticleGun->SetParticleMomentumDirection(G4ThreeVector(-0.4, 0., 1.));
   fParticleGun->SetParticleEnergy(6. * MeV);
 
 }
@@ -107,18 +107,22 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 //
 //  fParticleGun->GeneratePrimaryVertex(event);
 //}
+
+
+
+
   void PrimaryGeneratorAction::GeneratePrimaries(G4Event* event)
 {
 
   /* for pan view */
   G4double x0 = -350 + counter*10;
-  G4double y0 = 50;
+  G4double y0 = 10;
   G4double z0 = -400 ;
 
 
   /* for single point */
-//  G4double x0 = 0;
-//  G4double y0 = 0 ;
+//  G4double x0 = 230;
+//  G4double y0 = 50 ;
 //  G4double z0 = -400 ;
 
 
@@ -131,5 +135,17 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+
+
+
+
+
+
+
+
+
+
+
+
 
 }  // namespace B1

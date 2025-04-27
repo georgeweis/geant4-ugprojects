@@ -222,13 +222,93 @@ int main(int argc, char** argv)
           << BoundingBox.GetZHalfLength() << std::endl;
 
 
-  G4ThreeVector P_inside_check = G4ThreeVector{10, 10, -400};
+  G4ThreeVector P_inside_check = G4ThreeVector{-60,0,-400};
   G4ThreeVector v_DTI_check = G4ThreeVector{0, 0, 1};
   std::cout<<"BoundingBox.Inside("<<P_inside_check<<"): "<<BoundingBox.Inside(P_inside_check)<<std::endl;
-  std::cout<<"BoundingBox.DistanceToIn("<<P_inside_check<<","<<v_DTI_check<<"): "<<BoundingBox.DistanceToIn(P_inside_check, v_DTI_check)<<std::endl;
+  std::cout<<"BoundingBox.DistanceToOut("<<P_inside_check<<","<<v_DTI_check<<"): "<<BoundingBox.DistanceToOut(P_inside_check, v_DTI_check)<<std::endl;
 
   std::cout<<end_section<<std::endl;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  // check discrete line search algorithm
+  std::cout<<start_section<<" check discrete line search algorithm "<<start_section<<std::endl;
+
+  //line to test
+  G4ThreeVector P0_start = G4ThreeVector(-60,0,-400);
+  G4ThreeVector direction = G4ThreeVector{0, 0.3, 1};
+  double line_length = 800;
+
+  // step size
+  int max_nb_steps = 20;
+  double step_size = line_length/max_nb_steps;
+
+  //declaring variables
+  std::vector<double> uvl_opt;
+  double residual_opt = 1e-1*10;
+
+  // vectors to be filled for indside/ outside points
+  std::vector<G4ThreeVector> inside_pts;
+  std::vector<G4ThreeVector> outside_pts;
+  std::vector<G4ThreeVector> surface_pts;
+
+
+  //step process
+  G4ThreeVector p_previous = P0_start; // assumed to be inside already
+  G4ThreeVector p_current;
+  int nb_steps_taken = 0;
+  bool intersection_found = false;
+
+  for (int i = 0; i < max_nb_steps; i++)
+  {
+
+    p_current = p_previous + step_size*direction;
+    nb_steps_taken++;
+
+    if (torusNurbs->Inside(p_current) == kInside){inside_pts.push_back(p_current);}
+    if (torusNurbs->Inside(p_current) == kOutside){outside_pts.push_back(p_current);}
+    if (torusNurbs->Inside(p_current) == kSurface){surface_pts.push_back(p_current);}
+    p_previous = p_current; // update p_current for next iteration
+  }
+
+
+  // printing results for python
+  std::cout<<"p0 = np.array(["<<P0_start.x()<<","<<P0_start.y()<<","<<P0_start.z()<<"], dtype = float)"<<"\n"
+           <<"n_line = np.array(["<<direction.x()<<","<<direction.y()<<","<<direction.z()<<"], dtype = float)"<<"\n"
+           <<"line_length = "<<line_length<<std::endl;
+
+
+  std::cout<<"inside_pts = np.array([";
+  for(int i = 0; i < inside_pts.size(); ++i) {
+    std::cout<<"["<<inside_pts[i].x()<<", "<<inside_pts[i].y()<<", "<<inside_pts[i].z()<<"],";
+  }
+  std::cout<<" ])"<<std::endl;
+
+  std::cout<<"outside_pts = np.array([";
+  for(int i = 0; i < outside_pts.size(); ++i) {
+    std::cout<<"["<<outside_pts[i].x()<<", "<<outside_pts[i].y()<<", "<<outside_pts[i].z()<<"],";
+  }
+  std::cout<<" ])"<<std::endl;
+
+  std::cout<<"surface_pts = np.array([";
+  for(int i = 0; i < surface_pts.size(); ++i) {
+    std::cout<<"["<<surface_pts[i].x()<<", "<<surface_pts[i].y()<<", "<<surface_pts[i].z()<<"],";
+  }
+  std::cout<<" ])"<<std::endl;
+
+  std::cout<<end_section<<std::endl;
 
   // check distance to in
   std::cout<<start_section<<" DistanceToIn(p,v)"<<start_section<<std::endl;
@@ -243,6 +323,70 @@ int main(int argc, char** argv)
   std::cout<<"d_to_in = "<<d_to_in<<std::endl;
 
   std::cout<<end_section<<std::endl;
+
+
+
+
+
+
+
+
+  // linked intersection test ======================================
+
+  std::cout << start_section << "// linking intersection tests" << start_section << "\n" << std::endl;
+
+  std::vector<G4ThreeVector> linked_intersections;
+
+  // P0_cont1 is below torus
+  G4ThreeVector P0_cont1 = G4ThreeVector(10,-10,0);
+  G4ThreeVector direction_cont = G4ThreeVector(0,0, 1);
+  direction_cont = direction_cont.unit();
+  linked_intersections.push_back(P0_cont1);
+
+
+  G4double distance_cont1 = torusNurbs->DistanceToIn(P0_cont1, direction_cont.unit());
+  std::cout<<start_section<<"\n distance_cont1: "<<distance_cont1<<"\n"<<std::endl; //works
+
+
+
+  //P0_cont2 is bottom of torus
+  G4ThreeVector P0_cont2 = P0_cont1 + distance_cont1*direction_cont;
+  linked_intersections.push_back(P0_cont2);
+
+  G4double distance_cont2 = torusNurbs->DistanceToOut(P0_cont2, direction_cont.unit());
+  std::cout<<start_section<<"\n distance_cont2: "<<distance_cont2<<"\n"<<std::endl;
+//
+//
+  // P0_cont3 is bottom of inner loop
+  G4ThreeVector P0_cont3 = P0_cont2 + distance_cont2*direction_cont;
+  linked_intersections.push_back(P0_cont3);
+
+//  G4double distance_cont3 = torusNurbs->DistanceToIn(P0_cont3, direction_cont.unit());
+//  std::cout<<start_section<<"\n distance_cont3: "<<distance_cont3<<"\n"<<std::endl;
+//
+//
+//  // P0_cont4 is top of innter radius
+//  G4ThreeVector P0_cont4 = P0_cont3 + distance_cont3*direction_cont;
+//  linked_intersections.push_back(P0_cont4);
+//
+//  G4double distance_cont4 = torusNurbs->DistanceToOut(P0_cont4, direction_cont.unit());
+//  std::cout<<start_section<<"\n distance_cont4: "<<distance_cont3<<"\n"<<std::endl;
+//
+//  // P0_cont5 is at top of outer radius
+//  G4ThreeVector P0_cont5 = P0_cont4 + distance_cont4*direction_cont;
+//  linked_intersections.push_back(P0_cont5);
+//
+//  G4double distance_cont5 = torusNurbs->DistanceToIn(P0_cont5, direction_cont.unit()); // should be large number
+
+
+  std::cout<<"linked_intersection = np.array([";
+  for(int i = 0; i < linked_intersections.size(); ++i) {
+    std::cout<<"["<<linked_intersections[i].x()<<", "<<linked_intersections[i].y()<<", "<<linked_intersections[i].z()<<"],";
+  }
+  std::cout<<" ])"<<std::endl;
+
+
+
 
 
 
