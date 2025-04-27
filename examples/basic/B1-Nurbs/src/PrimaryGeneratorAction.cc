@@ -112,7 +112,7 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 
   /* for pan view */
   G4double x0 = -350 + counter*10;
-  G4double y0 = 0 ;
+  G4double y0 = 50;
   G4double z0 = -400 ;
 
 

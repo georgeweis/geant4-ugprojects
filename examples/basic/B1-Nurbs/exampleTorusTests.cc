@@ -642,6 +642,10 @@ int main(int argc, char** argv)
 
 
 
+  std::cout<<"working on BruteForceIntersection branch"<<std::endl;
+
+
+
 
 
 
