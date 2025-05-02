@@ -133,44 +133,44 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   //
   // Shape 2
   //
-  G4Material* shape2_mat = nist->FindOrBuildMaterial("G4_BONE_COMPACT_ICRU");
-  G4ThreeVector pos2 = G4ThreeVector(0, -1 * cm, 7 * cm);
-
-  // Trapezoid shape
-  G4double shape2_dxa = 12 * cm, shape2_dxb = 12 * cm;
-  G4double shape2_dya = 10 * cm, shape2_dyb = 16 * cm;
-  G4double shape2_dz = 6 * cm;
-  auto solidShape2 =
-    new G4Trd("Shape2",  // its name
-              0.5 * shape2_dxa, 0.5 * shape2_dxb, 0.5 * shape2_dya, 0.5 * shape2_dyb,
-              0.5 * shape2_dz);  // its size
-
-  auto logicShape2 = new G4LogicalVolume(solidShape2,  // its solid
-                                         shape2_mat,  // its material
-                                         "Shape2");  // its name
-
-  new G4PVPlacement(nullptr,  // no rotation
-                    pos2,  // at position
-                    logicShape2,  // its logical volume
-                    "Shape2",  // its name
-                    logicEnv,  // its mother  volume
-                    false,  // no boolean operation
-                    0,  // copy number
-                    checkOverlaps);  // overlaps checking
+//  G4Material* shape2_mat = nist->FindOrBuildMaterial("G4_BONE_COMPACT_ICRU");
+//  G4ThreeVector pos2 = G4ThreeVector(0, -1 * cm, 7 * cm);
+//
+//  // Trapezoid shape
+//  G4double shape2_dxa = 12 * cm, shape2_dxb = 12 * cm;
+//  G4double shape2_dya = 10 * cm, shape2_dyb = 16 * cm;
+//  G4double shape2_dz = 6 * cm;
+//  auto solidShape2 =
+//    new G4Trd("Shape2",  // its name
+//              0.5 * shape2_dxa, 0.5 * shape2_dxb, 0.5 * shape2_dya, 0.5 * shape2_dyb,
+//              0.5 * shape2_dz);  // its size
+//
+//  auto logicShape2 = new G4LogicalVolume(solidShape2,  // its solid
+//                                         shape2_mat,  // its material
+//                                         "Shape2");  // its name
+//
+//  new G4PVPlacement(nullptr,  // no rotation
+//                    pos2,  // at position
+//                    logicShape2,  // its logical volume
+//                    "Shape2",  // its name
+//                    logicEnv,  // its mother  volume
+//                    false,  // no boolean operation
+//                    0,  // copy number
+//                    checkOverlaps);  // overlaps checking
 
 
   //Attempting to add my custom solid class
 
   G4Material* george_mat = nist->FindOrBuildMaterial("G4_BONE_COMPACT_ICRU");
 
-  G4double GeorgeRadius = 4 * cm;
+  G4double GeorgeRadius = 6 * cm;
   G4GeorgeSolid* georgeSolid = new G4GeorgeSolid("test", GeorgeRadius);
 
 
 
   auto logicGeorge = new G4LogicalVolume(georgeSolid, george_mat, "GeorgeSolid");
 
-  G4ThreeVector georgePosition = G4ThreeVector(0 * cm, 0 * cm, -3 * cm);
+  G4ThreeVector georgePosition = G4ThreeVector(0 * cm, 0 * cm, 0 * cm);
 
   new G4PVPlacement(nullptr,  // no rotation
                   georgePosition,  // position
