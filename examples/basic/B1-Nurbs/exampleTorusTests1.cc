@@ -49,6 +49,7 @@
 #include "G4GeorgeNurbs.hh"
 #include "G4GeorgeSolid.hh"
 #include "G4Box.hh"
+#include "SavedTorusData.hh"
 
 #include <iostream>
 #include <vector>
@@ -57,129 +58,9 @@
 
 
 
-//using namespace B1;
+using namespace B1;
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
-namespace georgeTorusTests{
-std::vector<std::vector<G4ThreeVector>> getTorusControlPts()
-{
-
-  std::vector<std::vector<G4ThreeVector>> controlPts =
-  {
-    {G4ThreeVector{-125, 0, 0},
-    G4ThreeVector{-125, 0, 125},
-    G4ThreeVector{0, 0, 125},
-    G4ThreeVector{125, 0, 125},
-    G4ThreeVector{125, 0, 0},
-    G4ThreeVector{125, 0, -125},
-    G4ThreeVector{0, 0, -125},
-    G4ThreeVector{-125, 0, -125},
-    G4ThreeVector{-125, 0, 0}},
-
-    {G4ThreeVector{-125, 100, 0},
-    G4ThreeVector{-125, 100, 125},
-    G4ThreeVector{0, 100, 125},
-    G4ThreeVector{125, 100, 125},
-    G4ThreeVector{125, 100, 0},
-    G4ThreeVector{125, 100, -125},
-    G4ThreeVector{0, 100, -125},
-    G4ThreeVector{-125, 100, -125},
-    G4ThreeVector{-125, 100, 0}},
-
-    {G4ThreeVector{-225, 100, 0},
-    G4ThreeVector{-225, 100, 225},
-    G4ThreeVector{0, 100, 225},
-    G4ThreeVector{225, 100, 225},
-    G4ThreeVector{225, 100, 0},
-    G4ThreeVector{225, 100, -225},
-    G4ThreeVector{0, 100, -225},
-    G4ThreeVector{-225, 100, -225},
-    G4ThreeVector{-225, 100, 0}},
-
-    {G4ThreeVector{-325, 100, 0},
-    G4ThreeVector{-325, 100, 325},
-    G4ThreeVector{0, 100, 325},
-    G4ThreeVector{325, 100, 325},
-    G4ThreeVector{325, 100, 0},
-    G4ThreeVector{325, 100, -325},
-    G4ThreeVector{0, 100, -325},
-    G4ThreeVector{-325, 100, -325},
-    G4ThreeVector{-325, 100, 0}},
-
-    {G4ThreeVector{-325, 0, 0},
-    G4ThreeVector{-325, 0, 325},
-    G4ThreeVector{0, 0, 325},
-    G4ThreeVector{325, 0, 325},
-    G4ThreeVector{325, 0, 0},
-    G4ThreeVector{325, 0, -325},
-    G4ThreeVector{0, 0, -325},
-    G4ThreeVector{-325, 0, -325},
-    G4ThreeVector{-325, 0, 0}},
-
-    {G4ThreeVector{-325, -100, 0},
-    G4ThreeVector{-325, -100, 325},
-    G4ThreeVector{0, -100, 325},
-    G4ThreeVector{325, -100, 325},
-    G4ThreeVector{325, -100, 0},
-    G4ThreeVector{325, -100, -325},
-    G4ThreeVector{0, -100, -325},
-    G4ThreeVector{-325, -100, -325},
-    G4ThreeVector{-325, -100, 0}},
-
-    {G4ThreeVector{-225, -100, 0},
-    G4ThreeVector{-225, -100, 225},
-    G4ThreeVector{0, -100, 225},
-    G4ThreeVector{225, -100, 225},
-    G4ThreeVector{225, -100, 0},
-    G4ThreeVector{225, -100, -225},
-    G4ThreeVector{0, -100, -225},
-    G4ThreeVector{-225, -100, -225},
-    G4ThreeVector{-225, -100, 0}},
-
-    {G4ThreeVector{-125, -100, 0},
-    G4ThreeVector{-125, -100, 125},
-    G4ThreeVector{0, -100, 125},
-    G4ThreeVector{125, -100, 125},
-    G4ThreeVector{125, -100, 0},
-    G4ThreeVector{125, -100, -125},
-    G4ThreeVector{0, -100, -125},
-    G4ThreeVector{-125, -100, -125},
-    G4ThreeVector{-125, -100, 0}},
-
-    {G4ThreeVector{-125, 0, 0},
-    G4ThreeVector{-125, 0, 125},
-    G4ThreeVector{0, 0, 125},
-    G4ThreeVector{125, 0, 125},
-    G4ThreeVector{125, 0, 0},
-    G4ThreeVector{125, 0, -125},
-    G4ThreeVector{0, 0, -125},
-    G4ThreeVector{-125, 0, -125},
-    G4ThreeVector{-125, 0, 0}},
-  };
-  return controlPts;
-}
-
-
-std::vector<std::vector<G4double>> getTorusWeights()
-{
-  std::vector<std::vector<G4double>> weights = {
-  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
-  {0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707},
-  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
-  {0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707},
-  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
-  {0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707},
-  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
-  {0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707},
-  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
-};
-  return weights;
-}
-
-}// namespace georgeTorus
-
-
 
 
 int main(int argc, char** argv)
@@ -195,8 +76,9 @@ int main(int argc, char** argv)
 
 
   // creating a nurbs torus
-  std::vector<std::vector<G4ThreeVector>> torusControlPts = georgeTorusTests::getTorusControlPts();
-  std::vector<std::vector<G4double>> torusWeights = georgeTorusTests::getTorusWeights();
+  SavedTorusData torusData;
+  std::vector<std::vector<G4ThreeVector>> torusControlPts = torusData.getTorusControlPts();
+  std::vector<std::vector<G4double>> torusWeights = torusData.getTorusWeights();
 
   std::vector<G4double> torusKnotsU = {0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1};
   std::vector<G4double> torusKnotsV = {0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1};
@@ -273,7 +155,6 @@ int main(int argc, char** argv)
 
   for (int i = 0; i < max_nb_steps; i++)
   {
-
     p_current = p_previous + step_size*direction;
     nb_steps_taken++;
 
@@ -415,7 +296,7 @@ int main(int argc, char** argv)
 
 
 
-  return 0;
+//  return 0;
 
 
 }
