@@ -40,125 +40,9 @@
 #include "G4Trd.hh"
 #include "G4GeorgeSolid.hh"
 #include "G4GeorgeNurbs.hh"
+#include "SavedTorusData.hh"
+#include "G4Tubs.hh"
 
-
-namespace georgeTorus{
-std::vector<std::vector<G4ThreeVector>> getTorusControlPts()
-{
-
-  std::vector<std::vector<G4ThreeVector>> controlPts =
-  {
-    {G4ThreeVector{-125, 0, 0},
-    G4ThreeVector{-125, 0, 125},
-    G4ThreeVector{0, 0, 125},
-    G4ThreeVector{125, 0, 125},
-    G4ThreeVector{125, 0, 0},
-    G4ThreeVector{125, 0, -125},
-    G4ThreeVector{0, 0, -125},
-    G4ThreeVector{-125, 0, -125},
-    G4ThreeVector{-125, 0, 0}},
-
-    {G4ThreeVector{-125, 100, 0},
-    G4ThreeVector{-125, 100, 125},
-    G4ThreeVector{0, 100, 125},
-    G4ThreeVector{125, 100, 125},
-    G4ThreeVector{125, 100, 0},
-    G4ThreeVector{125, 100, -125},
-    G4ThreeVector{0, 100, -125},
-    G4ThreeVector{-125, 100, -125},
-    G4ThreeVector{-125, 100, 0}},
-
-    {G4ThreeVector{-225, 100, 0},
-    G4ThreeVector{-225, 100, 225},
-    G4ThreeVector{0, 100, 225},
-    G4ThreeVector{225, 100, 225},
-    G4ThreeVector{225, 100, 0},
-    G4ThreeVector{225, 100, -225},
-    G4ThreeVector{0, 100, -225},
-    G4ThreeVector{-225, 100, -225},
-    G4ThreeVector{-225, 100, 0}},
-
-    {G4ThreeVector{-325, 100, 0},
-    G4ThreeVector{-325, 100, 325},
-    G4ThreeVector{0, 100, 325},
-    G4ThreeVector{325, 100, 325},
-    G4ThreeVector{325, 100, 0},
-    G4ThreeVector{325, 100, -325},
-    G4ThreeVector{0, 100, -325},
-    G4ThreeVector{-325, 100, -325},
-    G4ThreeVector{-325, 100, 0}},
-
-    {G4ThreeVector{-325, 0, 0},
-    G4ThreeVector{-325, 0, 325},
-    G4ThreeVector{0, 0, 325},
-    G4ThreeVector{325, 0, 325},
-    G4ThreeVector{325, 0, 0},
-    G4ThreeVector{325, 0, -325},
-    G4ThreeVector{0, 0, -325},
-    G4ThreeVector{-325, 0, -325},
-    G4ThreeVector{-325, 0, 0}},
-
-    {G4ThreeVector{-325, -100, 0},
-    G4ThreeVector{-325, -100, 325},
-    G4ThreeVector{0, -100, 325},
-    G4ThreeVector{325, -100, 325},
-    G4ThreeVector{325, -100, 0},
-    G4ThreeVector{325, -100, -325},
-    G4ThreeVector{0, -100, -325},
-    G4ThreeVector{-325, -100, -325},
-    G4ThreeVector{-325, -100, 0}},
-
-    {G4ThreeVector{-225, -100, 0},
-    G4ThreeVector{-225, -100, 225},
-    G4ThreeVector{0, -100, 225},
-    G4ThreeVector{225, -100, 225},
-    G4ThreeVector{225, -100, 0},
-    G4ThreeVector{225, -100, -225},
-    G4ThreeVector{0, -100, -225},
-    G4ThreeVector{-225, -100, -225},
-    G4ThreeVector{-225, -100, 0}},
-
-    {G4ThreeVector{-125, -100, 0},
-    G4ThreeVector{-125, -100, 125},
-    G4ThreeVector{0, -100, 125},
-    G4ThreeVector{125, -100, 125},
-    G4ThreeVector{125, -100, 0},
-    G4ThreeVector{125, -100, -125},
-    G4ThreeVector{0, -100, -125},
-    G4ThreeVector{-125, -100, -125},
-    G4ThreeVector{-125, -100, 0}},
-
-    {G4ThreeVector{-125, 0, 0},
-    G4ThreeVector{-125, 0, 125},
-    G4ThreeVector{0, 0, 125},
-    G4ThreeVector{125, 0, 125},
-    G4ThreeVector{125, 0, 0},
-    G4ThreeVector{125, 0, -125},
-    G4ThreeVector{0, 0, -125},
-    G4ThreeVector{-125, 0, -125},
-    G4ThreeVector{-125, 0, 0}},
-  };
-  return controlPts;
-}
-
-
-std::vector<std::vector<G4double>> getTorusWeights()
-{
-  std::vector<std::vector<G4double>> weights = {
-  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
-  {0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707},
-  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
-  {0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707},
-  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
-  {0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707},
-  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
-  {0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707, 0.707},
-  {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0},
-};
-  return weights;
-}
-
-}// namespace georgeTorus
 
 namespace B1
 {
@@ -174,14 +58,14 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   // Envelope parameters
   G4double env_sizeX = 40 * cm, env_sizeY = 20 * cm, env_sizeZ = 40 * cm;
 
-  G4Material* env_mat = nist->FindOrBuildMaterial("G4_WATER");
+  G4Material* env_mat = nist->FindOrBuildMaterial("G4_AIR");
   // World material
   G4Material* world_mat = nist->FindOrBuildMaterial("G4_AIR");
 
 
 
-
-  // World dimensions (800 mm x 800 mm x 800 mm)
+  // =======================================================================
+  //   World dimensions (800 mm x 800 mm x 800 mm)
   G4double world_half = 41 * cm;
 
   auto solidWorld = new G4Box("World", world_half, world_half, world_half);
@@ -197,9 +81,10 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
                                     "Envelope");  // its name
 
 
-  // Torus NURBS definition (you will fill in these manually)
-  std::vector<std::vector<G4ThreeVector>> torusControlPts = georgeTorus::getTorusControlPts();
-  std::vector<std::vector<G4double>> torusWeights = georgeTorus::getTorusWeights();
+  // Torus NURBS definition
+  SavedTorusData torusData;
+  std::vector<std::vector<G4ThreeVector>> torusControlPts = torusData.getOuterTokamakControlPts();
+  std::vector<std::vector<G4double>> torusWeights = torusData.getTokamakWeights();
 
   std::vector<G4double> torusKnotsU = {0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1};
   std::vector<G4double> torusKnotsV = {0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1};
@@ -212,11 +97,90 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
                                                  torusKnotsU, torusKnotsV,
                                                  torusDegreeU, torusDegreeV);
 
+
+
+
+
   // Logical and physical placement of the torus
-  G4Material* torus_mat = nist->FindOrBuildMaterial("G4_WATER");
+  G4Material* torus_mat = nist->FindOrBuildMaterial("G4_Fe");
   auto logicTorus = new G4LogicalVolume(torusNurbs, torus_mat, "NurbsTorusLV");
 
   new G4PVPlacement(nullptr, G4ThreeVector(), logicTorus, "NurbsTorus", logicWorld, false, 0, true);
+
+
+  //==========================================================
+
+//  // World dimensions (800 mm x 800 mm x 800 mm)
+//  G4double world_half = 4;
+//
+//  auto solidWorld = new G4Box("World", world_half, world_half, world_half);
+//  auto logicWorld = new G4LogicalVolume(solidWorld, world_mat, "World");
+//  auto physWorld = new G4PVPlacement(nullptr, G4ThreeVector(), logicWorld, "World", nullptr, false, 0, false);
+//
+//  // envelope
+//  auto solidEnv = new G4Box("Envelope",  // its name
+//                            env_sizeX, env_sizeY, env_sizeZ);  // its size
+//
+//  auto logicEnv = new G4LogicalVolume(solidEnv,  // its solid
+//                                    env_mat,  // its material
+//                                    "Envelope");  // its name
+//  // instantiaion of my nurbs cylinder
+//  G4double r = 1.0;
+//  G4double w = std::sqrt(2) / 2.0;
+//
+//  std::vector<std::vector<G4ThreeVector>> controlPts = {
+//    {
+//      G4ThreeVector{0.0, -r,  r},
+//      G4ThreeVector{ r,   -r,  r},
+//      G4ThreeVector{ r,    0.0, r},
+//      G4ThreeVector{ r,    r,  r},
+//      G4ThreeVector( 0.0,  r,  r)
+//  },
+//  {
+//    G4ThreeVector{ 0.0, -r, -r},
+//    G4ThreeVector{ r,   -r, -r},
+//    G4ThreeVector{ r,    0.0, -r},
+//    G4ThreeVector{ r,    r, -r},
+//    G4ThreeVector{ 0.0,  r, -r}
+//  }};
+//
+//  std::vector<std::vector<G4double>> weights = {
+//    {1, w, 1, w, 1},
+//    {1, w, 1, w, 1}
+//  };
+//
+//  std::vector<G4double> knotsU = {0, 0, 1, 1};
+//  std::vector<G4double> knotsV = {0, 0, 0, 0.5, 0.5, 1, 1, 1};
+//
+//  int degreeU = 1;
+//  int degreeV = 2;
+//
+//  G4GeorgeNurbs* NurbsCylinder = new G4GeorgeNurbs("Nurbs Half Cylinder",
+//                                                   controlPts,
+//                                                   weights,
+//                                                   knotsU,
+//                                                   knotsV,
+//                                                   degreeU,
+//                                                   degreeV);
+//  //analytical cylinder
+//  double radius = 1;
+//  double halfLength = 10;
+//  auto G4Cylinder = new G4Tubs("CylZ", 0, radius, halfLength, 0., 360.*deg);
+//
+//
+//
+//
+//
+//  // Logical and physical placement of the torus
+//  G4Material* torus_mat = nist->FindOrBuildMaterial("G4_Fe");
+//  auto logicTorus = new G4LogicalVolume(NurbsCylinder, torus_mat, "NurbsTorusLV");
+//
+//
+//
+//
+//  new G4PVPlacement(nullptr, G4ThreeVector(), logicTorus, "NurbsTorus", logicWorld, false, 0, true);
+
+  //==========================================================
 
   fScoringVolume = logicTorus;
 
