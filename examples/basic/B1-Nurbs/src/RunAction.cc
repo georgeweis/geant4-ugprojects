@@ -120,6 +120,8 @@ void RunAction::EndOfRunAction(const G4Run* run)
     runCondition += G4BestUnit(particleEnergy, "Energy");
   }
 
+
+
   // Print
   //
   if (IsMaster()) {

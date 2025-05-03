@@ -73,8 +73,10 @@ int main(int argc, char** argv)
 
   // finding the intersection with a line
   G4ThreeVector p_line = G4ThreeVector{3,0,0};
-  G4ThreeVector n_line_unnormalised= G4ThreeVector{-1,0,0};
+  G4ThreeVector n_line_unnormalised= G4ThreeVector{-1,0.,0.3};
   G4ThreeVector n_line = n_line_unnormalised.unit();
+
+  NurbsCylinder->EnableOptVerbose();
 
   double l_nurbs = NurbsCylinder->DistanceToIn(p_line, n_line);
   G4ThreeVector P_nurbs = (p_line + l_nurbs*n_line);
@@ -89,7 +91,7 @@ int main(int argc, char** argv)
   double nurbs_ana_residual = (P_nurbs-P_ana).mag();
   std::cout<<"nurbs_ana_residual: "<<nurbs_ana_residual<< " l_nurbs-l_ana: "<<l_nurbs-l_ana<<std::endl;
 
-
+  /* Intersection accuracy data
   // creating random lines to check
   double n_y_extent = 0.3;
   double n_z_extent = 0.4;
@@ -98,6 +100,8 @@ int main(int argc, char** argv)
   double d_to_in_ana;
   G4double y_compt_rad;
   G4double z_compt_rad;
+
+
 
   for (int i = 0; i < 4000; ++i) {
     y_compt_rad = -n_y_extent + 2 * n_y_extent * G4UniformRand();
@@ -118,6 +122,8 @@ int main(int argc, char** argv)
     std::cout<<nurbs_ana_residuals[i]<<",";
   }
   std::cout<<" ])"<<std::endl;
+
+   */
 
 
 

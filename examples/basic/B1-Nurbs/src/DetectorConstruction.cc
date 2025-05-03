@@ -83,8 +83,8 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
   // Torus NURBS definition
   SavedTorusData torusData;
-  std::vector<std::vector<G4ThreeVector>> torusControlPts = torusData.getOuterTokamakControlPts();
-  std::vector<std::vector<G4double>> torusWeights = torusData.getTokamakWeights();
+  std::vector<std::vector<G4ThreeVector>> torusControlPts = torusData.getTorusControlPts();
+  std::vector<std::vector<G4double>> torusWeights = torusData.getTorusWeights();
 
   std::vector<G4double> torusKnotsU = {0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1};
   std::vector<G4double> torusKnotsV = {0, 0, 0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1, 1, 1};

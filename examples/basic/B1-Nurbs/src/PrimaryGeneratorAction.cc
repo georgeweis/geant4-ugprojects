@@ -50,10 +50,10 @@ PrimaryGeneratorAction::PrimaryGeneratorAction()
   // default particle kinematic
   G4ParticleTable* particleTable = G4ParticleTable::GetParticleTable();
   G4String particleName;
-  G4ParticleDefinition* particle = particleTable->FindParticle(particleName = "geantino");
+  G4ParticleDefinition* particle = particleTable->FindParticle(particleName = "e-");
   fParticleGun->SetParticleDefinition(particle);
-  fParticleGun->SetParticleMomentumDirection(G4ThreeVector(-0.4, 0., 1.));
-  fParticleGun->SetParticleEnergy(6. * MeV);
+  fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0., 0., 1.));
+  fParticleGun->SetParticleEnergy(1. * GeV);
 
 }
 
@@ -115,15 +115,15 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 {
 
   /* for pan view */
-  G4double x0 = -350 + counter*10;
-  G4double y0 = 10;
-  G4double z0 = -400 ;
+//  G4double x0 = -350 + counter*10;
+//  G4double y0 = 0;
+//  G4double z0 = -400 ;
 
 
   /* for single point */
-//  G4double x0 = 230;
-//  G4double y0 = 50 ;
-//  G4double z0 = -400 ;
+  G4double x0 = 0;
+  G4double y0 = 9;
+  G4double z0 = -400 ;
 
 
 

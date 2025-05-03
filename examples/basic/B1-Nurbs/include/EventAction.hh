@@ -56,6 +56,7 @@ class EventAction : public G4UserEventAction
   private:
     RunAction* fRunAction = nullptr;
     G4double fEdep = 0.;
+    G4int totalTrajectories = 0;
 };
 
 }  // namespace B1

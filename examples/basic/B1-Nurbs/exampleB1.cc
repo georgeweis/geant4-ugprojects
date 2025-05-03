@@ -36,6 +36,7 @@
 #include "G4UIExecutive.hh"
 #include "G4UImanager.hh"
 #include "G4VisExecutive.hh"
+#include "G4ScoringManager.hh"
 // #include "Randomize.hh"
 
 using namespace B1;
@@ -61,6 +62,7 @@ int main(int argc, char** argv)
   // Construct the default run manager
   //
   auto runManager = G4RunManagerFactory::CreateRunManager(G4RunManagerType::Default);
+  G4ScoringManager::GetScoringManager();
 
   // Set mandatory initialization classes
   //

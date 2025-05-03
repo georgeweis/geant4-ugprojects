@@ -30,6 +30,8 @@
 #include "EventAction.hh"
 
 #include "RunAction.hh"
+#include "G4TrajectoryContainer.hh"
+#include "G4Event.hh"
 
 namespace B1
 {
@@ -47,10 +49,24 @@ void EventAction::BeginOfEventAction(const G4Event*)
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-void EventAction::EndOfEventAction(const G4Event*)
+//void EventAction::EndOfEventAction(const G4Event*)
+//{
+//  // accumulate statistics in run action
+//  fRunAction->AddEdep(fEdep);
+//}
+
+  void EventAction::EndOfEventAction(const G4Event* event)
 {
-  // accumulate statistics in run action
+  // Existing functionality
   fRunAction->AddEdep(fEdep);
+
+  // New: Count and optionally print number of trajectories in this event
+  G4TrajectoryContainer* trajContainer = event->GetTrajectoryContainer();
+  G4int nTraj = (trajContainer) ? trajContainer->entries() : 0;
+  G4cout << "🫡Number of trajectories in this event: " << nTraj << G4endl;
+
+  // Optional: accumulate total over run
+  totalTrajectories += nTraj;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
