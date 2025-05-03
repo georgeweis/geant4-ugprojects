@@ -16,6 +16,7 @@
 #include "G4GeometryTolerance.hh"
 #include "G4VPVParameterisation.hh"
 #include "G4VoxelLimits.hh"
+#include "G4SystemOfUnits.hh"
 
 #include "meshdefs.hh"
 #include <G4Box.hh>
@@ -31,9 +32,34 @@
 
 double G4GeorgeNurbs::LARGE_NUMBER = 1e6;
 G4ThreeVector G4GeorgeNurbs::LARGE_THREE_VECTOR = G4ThreeVector( 1e6,  1e6,  1e6);
-double G4GeorgeNurbs::CONVERGENCE_TOLERANCE = 1e-8;
+double G4GeorgeNurbs::CONVERGENCE_TOLERANCE = 1e-7;
 double G4GeorgeNurbs::SURFACE_TOLERANCE = 1e-1;
 
+
+bool G4GeorgeNurbs::trackFunctions = false;
+
+int G4GeorgeNurbs::nbInsideCalls = 0;
+int G4GeorgeNurbs::nbSurfaceNormalCalls = 0;
+
+int G4GeorgeNurbs::nbDTIpCalls = 0;
+int G4GeorgeNurbs::nbDTIpvCalls = 0;
+int G4GeorgeNurbs::nbDTIdiscreteCalls = 0;
+std::vector<int> G4GeorgeNurbs::nbStepsForDTI = {};
+int G4GeorgeNurbs::nbEstimationsForDTI = 0;
+
+
+
+int G4GeorgeNurbs::nbDTOpCalls = 0;
+int G4GeorgeNurbs::nbDTOpvCalls = 0;
+int G4GeorgeNurbs::nbDTOdiscreteCalls = 0;
+std::vector<int> G4GeorgeNurbs::nbStepsForDTO = {};
+int G4GeorgeNurbs::nbEstimationsForDTO = 0;
+
+int G4GeorgeNurbs::nbClosestPointCalls = 0;
+std::vector<int> G4GeorgeNurbs::nbFuncEvalsInClosestPoint = {};
+
+int G4GeorgeNurbs::nbLineIntersecOptCalls = 0;
+std::vector<int> G4GeorgeNurbs::nbFuncEvalsInLineIntersec = {};
 
 
 
@@ -61,7 +87,51 @@ G4GeorgeNurbs::G4GeorgeNurbs(const G4String& name,
   optVerbose = false;
 }
 
-G4GeorgeNurbs::~G4GeorgeNurbs() = default;
+G4GeorgeNurbs::~G4GeorgeNurbs(){
+  if (trackFunctions){
+    std::cout << "Inside(p) calls: " << nbInsideCalls << std::endl;
+    std::cout << "SurfaceNormal(p) calls: " << nbSurfaceNormalCalls << std::endl;
+
+
+    std::cout << "DistanceToIn(p) calls: " << nbDTIpCalls << std::endl;
+    std::cout << "DistanceToIn(p,v) calls: " << nbDTIpvCalls << std::endl;
+    std::cout << "DiscreteLineSearchToIn(p,v) calls: " << nbDTIdiscreteCalls << std::endl;
+    std::cout << "Nb DiscreteLineSearchToIn(p,v) estimations: " << nbEstimationsForDTI << std::endl;
+
+    std::cout << "DistanceToOut(p) calls: " << nbDTOpCalls << std::endl;
+    std::cout << "DistanceToOut(p,v) calls: " << nbDTOpvCalls << std::endl;
+    std::cout << "DiscreteLineSearchToOut(p,v) calls: " << nbDTOdiscreteCalls << std::endl;
+    std::cout << "Nb DiscreteLineSearchToOut(p,v) estimations: " << nbEstimationsForDTO << std::endl;
+
+    std::cout << "LineIntersectionOpt calls: " << nbLineIntersecOptCalls << std::endl;
+    std::cout << "ClosestPoint calls: " << nbClosestPointCalls << std::endl;
+
+    std::cout << "Steps per DistanceToIn(p,v): ";
+    for (int steps : nbStepsForDTO) {
+      std::cout << steps << ", ";
+    }
+    std::cout << std::endl;
+
+//    std::cout << "Function evaluations per ClosestPoint: ";
+//    for (int evals : nbFuncEvalsInClosestPoint) {
+//      std::cout << evals << ", ";
+//    }
+//    std::cout << std::endl;
+
+    std::cout << "Steps per DistanceToOut(p,v): ";
+    for (int steps : nbStepsForDTI) {
+      std::cout << steps << ", ";
+    }
+    std::cout << std::endl;
+
+
+    std::cout << "Function evaluations per LineIntersectionOpt: ";
+    for (int evals : nbFuncEvalsInLineIntersec) {
+      std::cout << evals << ",";
+    }
+    std::cout << std::endl;
+  }
+};
 
 
 
@@ -199,7 +269,6 @@ G4double G4GeorgeNurbs::BasisFunctionDerivative(G4int i, G4int k, G4double t,
     double basis_i_plus1_k_minus_1 = BasisFunction(i + 1, k - 1, t, knotVector);
     term2 = (k / denom2) * basis_i_plus1_k_minus_1;
   }
-
   // The derivative is the difference between the two weighted terms
   return term1 - term2;
 }
@@ -364,15 +433,17 @@ std::tuple<std::vector<double>, double> G4GeorgeNurbs::ClosestKnot(const G4Three
 
 std::tuple<std::vector<double>, double> G4GeorgeNurbs::ClosestPointParams(const G4ThreeVector& point) const
 {
+  if (trackFunctions) nbClosestPointCalls++;
   // Finds the closest point on the surface to a given point in space
 
   // 1) set initial guess as closest knot
   auto [uv_closes_knot, R] = ClosestKnot(point);
   std::vector<double> uv_guess = uv_closes_knot;
 
-  // 2) Set up the NLopt optimizer (Nelder-Mead, 2D problem)
-  nlopt::opt optimizer(nlopt::LN_COBYLA, 2);
+  // 2) Set up the NLopt optimizer (Nelder-Mead, 2D problem) LN_BOBYQA  LN_COBYLA
+  nlopt::opt optimizer(nlopt::LN_BOBYQA, 2);
   optimizer.set_xtol_rel(CONVERGENCE_TOLERANCE);
+//  optimizer.set_ftol_abs(SURFACE_TOLERANCE/2);
 
   // 3) Prepare context with reference to this surface and the target point
   ClostestPointContext context = {this, point};
@@ -391,6 +462,7 @@ std::tuple<std::vector<double>, double> G4GeorgeNurbs::ClosestPointParams(const 
   try {
     optimizer.optimize(uv, optimised_residual); // changes value of uv during optimisation
 
+    if(trackFunctions) nbFuncEvalsInClosestPoint.push_back(context.call_count);
 
     return std::make_tuple(uv, optimised_residual); // Return closest surface point
   }
@@ -413,7 +485,9 @@ std::tuple<std::vector<double>, double, bool> G4GeorgeNurbs::LineIntersectionOpt
                                                                                 double line_length,
                                                                                 std::vector<double>& uvl_guess) const
 {
-  // set up optimiser
+  if(trackFunctions) nbLineIntersecOptCalls++;
+
+  // set up optimiser. LN_COBYLA or LN_BOBYQA <- this seems to work better
   nlopt::opt opt(nlopt::LN_BOBYQA, 3);
   opt.set_xtol_rel(CONVERGENCE_TOLERANCE);
 
@@ -446,6 +520,10 @@ std::tuple<std::vector<double>, double, bool> G4GeorgeNurbs::LineIntersectionOpt
     G4cout << "LineIntersectionOpt: objective evaluated "
          << context.call_count << " times." << G4endl;
     }
+
+    if(trackFunctions) nbFuncEvalsInLineIntersec.push_back(context.call_count);
+
+
 
 
     // return successfully optimised params with exit_status 0
@@ -630,8 +708,9 @@ double G4GeorgeNurbs::ResidualToSurfacePoint(const std::vector<double>& uv, std:
   // Unpacking context (contains the target point and pointer to the NURBS surface)
   const auto* context = static_cast<G4GeorgeNurbs::ClostestPointContext*>(data);
   const G4GeorgeNurbs* nurbs = context->nurbs;
-  const G4ThreeVector& target_point = context->target_point;
+  context->call_count++; // increasing call count
 
+  const G4ThreeVector& target_point = context->target_point;
   // find the surface point at uv (passed as argument)
   G4ThreeVector surf_pt = nurbs->SurfacePoint(uv[0], uv[1]);
 
@@ -666,7 +745,7 @@ double G4GeorgeNurbs::ResidualLineDistance(const std::vector<double>& uvl,
 
   // debug
   //std::cout<<context->direction<<std::endl;
-//  std::cout<<"u,v = "<<u<<" , "<<v<<"\n" <<"l = "<<l<<"\n";
+  //std::cout<<"u,v = "<<u<<" , "<<v<<"\n" <<"l = "<<l<<"\n";
 //  std::cout<<"r = "<<(P_line - P_nurbs).mag()<<"\n";
 //  std::cout<<"-----------"<<"\n";
 
@@ -689,6 +768,7 @@ double G4GeorgeNurbs::ResidualLineDistance(const std::vector<double>& uvl,
 EInside G4GeorgeNurbs::Inside(const G4ThreeVector& p) const
 {
 //   G4cout<<" Inside: "<<p <<G4endl;
+  if(trackFunctions) nbInsideCalls++;
 
   EInside inside_bbox_status = boundingBox.Inside(p-boundingBoxCentre) ;
   if(inside_bbox_status == kOutside)
@@ -729,6 +809,7 @@ G4ThreeVector G4GeorgeNurbs::SurfaceNormal(const G4ThreeVector& p) const
 {
   // finding the u,v parameters of the surface point with ClosestPointParams function.
   // residual_from_p should be 0.
+  if(trackFunctions) nbSurfaceNormalCalls++;
   auto [uv_from_p, residual_from_p] = ClosestPointParams(p);
   G4ThreeVector n = SurfaceNormal(uv_from_p[0], uv_from_p[1]);
 
@@ -758,6 +839,8 @@ G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p) const
   //G4cout<<" DistanceToIn(p): "<<p<<" (Default 10)"<<G4endl;
   //return 10;
 
+  if(trackFunctions) nbDTIpCalls++;
+
 
 
   // first check if point is already inside, return 0 if so
@@ -775,6 +858,8 @@ G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p) const
 
 G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVector& v) const
 {
+  if(trackFunctions) nbDTIpvCalls++;
+
   // check if inside bounding box
   bool started_outside_bbox = false;
   double l_intersect_bbox;
@@ -834,6 +919,7 @@ G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVecto
 double G4GeorgeNurbs::DiscreteLineSearchToIn(const G4ThreeVector& P0_start,
                                              const G4ThreeVector& direction) const
 {
+  if(trackFunctions) nbDTIdiscreteCalls++;
   // determining step size
   double l_max = boundingBox.DistanceToOut(P0_start-boundingBoxCentre, direction);
   int max_nb_steps = 20;
@@ -868,6 +954,8 @@ double G4GeorgeNurbs::DiscreteLineSearchToIn(const G4ThreeVector& P0_start,
     p_previous = p_current; // update p_current for next iteration
   }
 
+  if (trackFunctions) nbStepsForDTI.push_back(nb_steps_taken);
+
   // check the intersection
   if (residual_opt<SURFACE_TOLERANCE && intersection_found)
   {
@@ -877,6 +965,7 @@ double G4GeorgeNurbs::DiscreteLineSearchToIn(const G4ThreeVector& P0_start,
   }
   else if (intersection_found) // intersection present, but optimiser failed to find the exact location, return estimation
   {
+    if(trackFunctions) nbEstimationsForDTI++;
     auto [uv_from_p, residual_from_p] = ClosestPointParams(p_previous);
     G4ThreeVector surface_norm = SurfaceNormal(uv_from_p[0], uv_from_p[1]); // surface normal of closest surface point to p_previous
 
@@ -895,6 +984,7 @@ G4double G4GeorgeNurbs::DistanceToOut(const G4ThreeVector& p) const
 {
   //G4cout<<" DistanceToOut(p) "<<p<<" (Default 10)"<<G4endl;
   //return 30;
+    if(trackFunctions) nbDTOpCalls++;
 
 
   // first check if point is already outside, return 0 if so
@@ -916,6 +1006,7 @@ G4double G4GeorgeNurbs::DistanceToOut( const G4ThreeVector& p,const G4ThreeVecto
                                         G4bool* validNorm,
                                         G4ThreeVector* n ) const
 {
+  if(trackFunctions) nbDTOpvCalls++;
   //G4cout<<" DistanceToOut "<<p << v <<G4endl;
   // not used since it messes up Geant4 logic for some reason. Supress warnings on build
   (void)calcNorm;
@@ -954,6 +1045,7 @@ G4double G4GeorgeNurbs::DistanceToOut( const G4ThreeVector& p,const G4ThreeVecto
 double G4GeorgeNurbs::DiscreteLineSearchToOut(const G4ThreeVector& P0_start,
                                              const G4ThreeVector& direction) const
 {
+  if(trackFunctions) nbDTOdiscreteCalls++;
   // determining step size
   double l_max = boundingBox.DistanceToOut(P0_start-boundingBoxCentre, direction);
   int max_nb_steps = 30;
@@ -984,6 +1076,8 @@ double G4GeorgeNurbs::DiscreteLineSearchToOut(const G4ThreeVector& P0_start,
     p_previous = p_current; // update p_current for next iteration
   }
 
+  if(trackFunctions) nbStepsForDTO.push_back(nb_steps_taken);
+
   // check the intersection
   if (residual_opt<SURFACE_TOLERANCE && intersection_found)
   {
@@ -993,6 +1087,7 @@ double G4GeorgeNurbs::DiscreteLineSearchToOut(const G4ThreeVector& P0_start,
   }
   else // intersection present, but optimiser failed to find the exact location, return estimation
   {
+    if(trackFunctions) nbEstimationsForDTO++;
     auto [uv_from_p, residual_from_p] = ClosestPointParams(p_previous);
     G4ThreeVector surface_norm = SurfaceNormal(uv_from_p[0], uv_from_p[1]); // surface normal of closest surface point to p_previous
 
@@ -1006,12 +1101,12 @@ double G4GeorgeNurbs::DiscreteLineSearchToOut(const G4ThreeVector& P0_start,
 
 G4double G4GeorgeNurbs::GetCubicVolume()
 {
-  return 10;
+  return 44413220 * mm3;
 }
 
 G4double G4GeorgeNurbs::GetSurfaceArea()
 {
-  return 10;
+  return 888264 * mm2;
 }
 
 G4ThreeVector G4GeorgeNurbs::GetPointOnSurface() const
@@ -1116,6 +1211,8 @@ void G4GeorgeNurbs::SetBoundingLimits()
   boundsCached = true;
 }
 
+
+
 std::vector<G4ThreeVector> G4GeorgeNurbs::GetBounds() const {return {bminCached, bmaxCached};}
 G4double G4GeorgeNurbs::GetMaxExtent() const {return maxExtent;};
 
@@ -1153,7 +1250,7 @@ void G4GeorgeNurbs::InitialiseBoundingBox()
   G4ThreeVector center = 0.55 * (bminCached + bmaxCached); // slightly larger than actual box to avoid convergence issues
   G4ThreeVector halfSize = 0.55 * (bmaxCached - bminCached);
 
-  std::cout<<"center " <<center<< " halfSize "<<halfSize<<std::endl;
+//  std::cout<<"center " <<center<< " halfSize "<<halfSize<<std::endl;
 
   // Set the bounding box dimensions
   boundingBox.SetXHalfLength(halfSize.x());

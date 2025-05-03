@@ -46,6 +46,42 @@ class G4GeorgeNurbs : public G4VSolid
   static double CONVERGENCE_TOLERANCE;
   static double SURFACE_TOLERANCE;
 
+  // tracking nb function calls and other data
+  static bool trackFunctions;
+
+  static int nbInsideCalls; //
+  static int nbSurfaceNormalCalls;
+
+
+  static int nbDTIpCalls; //
+  static int nbDTIpvCalls; //
+  static int nbDTIdiscreteCalls; //
+  static std::vector<int> nbStepsForDTI; //
+  static int nbEstimationsForDTI;
+
+  static int nbDTOpCalls; //
+  static int nbDTOpvCalls; //
+  static int nbDTOdiscreteCalls; //
+  static std::vector<int> nbStepsForDTO; //
+  static int nbEstimationsForDTO;
+
+
+  static int nbClosestPointCalls; //
+  static std::vector<int> nbFuncEvalsInClosestPoint; //
+
+  static int nbLineIntersecOptCalls; //
+  static std::vector<int> nbFuncEvalsInLineIntersec; //
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -58,7 +94,7 @@ class G4GeorgeNurbs : public G4VSolid
                 const G4int& degreeU_in,
                 const G4int& degreeV_in);
 
-  ~G4GeorgeNurbs() override;
+  virtual ~G4GeorgeNurbs();
 
   void PrintVariables() const;
 
@@ -147,6 +183,7 @@ class G4GeorgeNurbs : public G4VSolid
   {
     const G4GeorgeNurbs* nurbs;
     G4ThreeVector target_point;
+    mutable int call_count = 0;
   }; // struct to pass context for closest point optimisation
 
   static double ResidualToSurfacePoint(const std::vector<double>& uv,
@@ -223,10 +260,12 @@ class G4GeorgeNurbs : public G4VSolid
   std::ostream& StreamInfo(std::ostream& os) const override;
   G4GeometryType GetEntityType() const override;
 
+
   void SetBoundingLimits();
 
   std::vector<G4ThreeVector> GetBounds() const;
   G4double GetMaxExtent() const;
+
 
 
   void ValidateKnotVectors() const;
