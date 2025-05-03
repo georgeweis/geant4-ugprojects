@@ -77,17 +77,22 @@ G4GeorgeNurbs::G4GeorgeNurbs(const G4String& name,
   knotVectorU(knotVectorU_in),
   knotVectorV(knotVectorV_in),
   degreeU(degreeU_in),
-  degreeV(degreeV_in),
-  boundingBox("BoundingBox", 0.1, 0.1, 0.1)
-
+  degreeV(degreeV_in)
 {
   ValidateKnotVectors();
   SetBoundingLimits();
+
+
+  boundingBox = new G4Box("BoundingBox", 0.1, 0.1, 0.1);
   InitialiseBoundingBox();
   optVerbose = false;
 }
 
 G4GeorgeNurbs::~G4GeorgeNurbs(){
+
+//  delete boundingBox;
+
+
   if (trackFunctions){
     std::cout << "Inside(p) calls: " << nbInsideCalls << std::endl;
     std::cout << "SurfaceNormal(p) calls: " << nbSurfaceNormalCalls << std::endl;
@@ -770,7 +775,7 @@ EInside G4GeorgeNurbs::Inside(const G4ThreeVector& p) const
 //   G4cout<<" Inside: "<<p <<G4endl;
   if(trackFunctions) nbInsideCalls++;
 
-  EInside inside_bbox_status = boundingBox.Inside(p-boundingBoxCentre) ;
+  EInside inside_bbox_status = boundingBox->Inside(p-boundingBoxCentre) ;
   if(inside_bbox_status == kOutside)
   {
     return kOutside;
@@ -864,10 +869,10 @@ G4double G4GeorgeNurbs::DistanceToIn(const G4ThreeVector& p0, const G4ThreeVecto
   bool started_outside_bbox = false;
   double l_intersect_bbox;
 
-  EInside inside_bbox_status = boundingBox.Inside(p0-boundingBoxCentre);
+  EInside inside_bbox_status = boundingBox->Inside(p0-boundingBoxCentre);
   if(!(inside_bbox_status == kInside))
   {
-    l_intersect_bbox = boundingBox.DistanceToIn(p0-boundingBoxCentre, v);
+    l_intersect_bbox = boundingBox->DistanceToIn(p0-boundingBoxCentre, v);
     started_outside_bbox = true;
 //    std::cout<<"p0 not inside bounding_box. l_intersect_bbox: "<<l_intersect_bbox<<std::endl;
     if(l_intersect_bbox>LARGE_NUMBER)
@@ -921,7 +926,7 @@ double G4GeorgeNurbs::DiscreteLineSearchToIn(const G4ThreeVector& P0_start,
 {
   if(trackFunctions) nbDTIdiscreteCalls++;
   // determining step size
-  double l_max = boundingBox.DistanceToOut(P0_start-boundingBoxCentre, direction);
+  double l_max = boundingBox->DistanceToOut(P0_start-boundingBoxCentre, direction);
   int max_nb_steps = 20;
   double step_size = l_max/max_nb_steps;
 
@@ -1020,7 +1025,7 @@ G4double G4GeorgeNurbs::DistanceToOut( const G4ThreeVector& p,const G4ThreeVecto
   }
 
   // attempt line intersection by optimising from start point
-  double l_max = boundingBox.DistanceToOut(p-boundingBoxCentre,v);
+  double l_max = boundingBox->DistanceToOut(p-boundingBoxCentre,v);
   auto [uvl_opt, residual_opt] = LineIntersectionParams(p, v, l_max);
   //G4cout<<" bbox.DistanceToOut(p,v) "<<p<< " " <<v<< " "<< uvl_opt[2]<<G4endl;
 
@@ -1047,7 +1052,7 @@ double G4GeorgeNurbs::DiscreteLineSearchToOut(const G4ThreeVector& P0_start,
 {
   if(trackFunctions) nbDTOdiscreteCalls++;
   // determining step size
-  double l_max = boundingBox.DistanceToOut(P0_start-boundingBoxCentre, direction);
+  double l_max = boundingBox->DistanceToOut(P0_start-boundingBoxCentre, direction);
   int max_nb_steps = 30;
   double step_size = l_max/max_nb_steps;
 
@@ -1253,13 +1258,13 @@ void G4GeorgeNurbs::InitialiseBoundingBox()
 //  std::cout<<"center " <<center<< " halfSize "<<halfSize<<std::endl;
 
   // Set the bounding box dimensions
-  boundingBox.SetXHalfLength(halfSize.x());
-  boundingBox.SetYHalfLength(halfSize.y());
-  boundingBox.SetZHalfLength(halfSize.z());
+  boundingBox->SetXHalfLength(halfSize.x());
+  boundingBox->SetYHalfLength(halfSize.y());
+  boundingBox->SetZHalfLength(halfSize.z());
 
   // Store the center for later offset corrections
   boundingBoxCentre = center;
 }
 
-void G4GeorgeNurbs::SetBoundingBox(G4Box boundingBoxIn){boundingBox = boundingBoxIn;}
-G4Box G4GeorgeNurbs::GetBoundingBox() const {return boundingBox;}
+//void G4GeorgeNurbs::SetBoundingBox(G4Box* boundingBoxIn){boundingBox = boundingBoxIn;}
+//G4Box G4GeorgeNurbs::GetBoundingBox() const {return boundingBox;}

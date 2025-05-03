@@ -33,7 +33,7 @@ class G4GeorgeNurbs : public G4VSolid
   G4double maxExtent;
   G4bool boundsCached;
 
-  G4Box boundingBox;
+  G4Box* boundingBox;
   G4ThreeVector boundingBoxCentre;
 
 
@@ -273,8 +273,8 @@ class G4GeorgeNurbs : public G4VSolid
   // called in the constructor and throws an error if invalid
 
   void InitialiseBoundingBox();
-  void SetBoundingBox(G4Box boundingBoxIn);
-  G4Box GetBoundingBox() const;
+//  void SetBoundingBox(G4Box boundingBoxIn);
+//  G4Box GetBoundingBox() const;
 
 
   void EnableOptVerbose();
